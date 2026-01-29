@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Workflow.Application.Organizations;
 using Workflow.Domain.Organizations;
 using Workflow.Infrastructure.Persistence;
@@ -12,28 +12,35 @@ public sealed class EfOrgMemberRepository : IOrgMemberRepository
 
     public EfOrgMemberRepository(WorkflowDbContext db) => _db = db;
 
-    public async Task AddAsync(OrgMember member, CancellationToken ct)
+    public Task AddAsync(OrgMember member, CancellationToken ct)
     {
         var entity = new OrgMemberEntity
         {
             OrganizationId = member.OrganizationId,
             UserId = member.UserId,
             Role = (int)member.Role,
-            JoinedAt = member.JoinedAt
+            JoinedAt = member.JoinedAt,
+
+            IsDeleted = false,
+            DeletedAtUtc = null,
+            DeletedByUserId = null
         };
 
         _db.OrgMembers.Add(entity);
-        await _db.SaveChangesAsync(ct);
+        return Task.CompletedTask; // UoW commits
     }
 
     public async Task<bool> ExistsAsync(Guid orgId, Guid userId, CancellationToken ct)
         => await _db.OrgMembers.AsNoTracking()
-            .AnyAsync(x => x.OrganizationId == orgId && x.UserId == userId, ct);
+            .AnyAsync(x =>
+                x.OrganizationId == orgId &&
+                x.UserId == userId &&
+                !x.IsDeleted, ct);
 
     public async Task<IReadOnlyList<OrgMember>> ListByOrgAsync(Guid orgId, CancellationToken ct)
     {
         var list = await _db.OrgMembers.AsNoTracking()
-            .Where(x => x.OrganizationId == orgId)
+            .Where(x => x.OrganizationId == orgId && !x.IsDeleted)
             .OrderBy(x => x.JoinedAt)
             .ToListAsync(ct);
 
@@ -45,10 +52,46 @@ public sealed class EfOrgMemberRepository : IOrgMemberRepository
     public async Task<OrgRole?> GetRoleAsync(Guid orgId, Guid userId, CancellationToken ct)
     {
         var roleInt = await _db.OrgMembers.AsNoTracking()
-            .Where(x => x.OrganizationId == orgId && x.UserId == userId)
+            .Where(x => x.OrganizationId == orgId && x.UserId == userId && !x.IsDeleted)
             .Select(x => (int?)x.Role)
             .FirstOrDefaultAsync(ct);
 
         return roleInt is null ? null : (OrgRole)roleInt.Value;
+    }
+
+    public async Task<int> CountOwnersAsync(Guid orgId, CancellationToken ct)
+        => await _db.OrgMembers.AsNoTracking()
+            .CountAsync(x =>
+                x.OrganizationId == orgId &&
+                !x.IsDeleted &&
+                x.Role == (int)OrgRole.Owner, ct);
+
+    public async Task UpdateRoleAsync(Guid orgId, Guid userId, OrgRole role, CancellationToken ct)
+    {
+        var entity = await _db.OrgMembers
+            .FirstOrDefaultAsync(x =>
+                x.OrganizationId == orgId &&
+                x.UserId == userId &&
+                !x.IsDeleted, ct);
+
+        if (entity is null) return;
+
+        entity.Role = (int)role;
+        // UoW commits
+    }
+
+    public async Task RemoveAsync(Guid orgId, Guid userId, Guid deletedByUserId, CancellationToken ct)
+    {
+        var entity = await _db.OrgMembers
+            .FirstOrDefaultAsync(x => x.OrganizationId == orgId && x.UserId == userId, ct);
+
+        if (entity is null) return;
+        if (entity.IsDeleted) return; // idempotent
+
+        entity.IsDeleted = true;
+        entity.DeletedAtUtc = DateTimeOffset.UtcNow;
+        entity.DeletedByUserId = deletedByUserId;
+
+        // UoW commits
     }
 }

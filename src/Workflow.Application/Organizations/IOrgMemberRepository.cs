@@ -8,6 +8,11 @@ public interface IOrgMemberRepository
     Task<bool> ExistsAsync(Guid orgId, Guid userId, CancellationToken ct);
     Task<IReadOnlyList<OrgMember>> ListByOrgAsync(Guid orgId, CancellationToken ct);
 
-    // Needed by OrgAuth
     Task<OrgRole?> GetRoleAsync(Guid orgId, Guid userId, CancellationToken ct);
+
+    Task<int> CountOwnersAsync(Guid orgId, CancellationToken ct);
+    Task UpdateRoleAsync(Guid orgId, Guid userId, OrgRole role, CancellationToken ct);
+
+    // Soft delete
+    Task RemoveAsync(Guid orgId, Guid userId, Guid actorUserId, CancellationToken ct);
 }

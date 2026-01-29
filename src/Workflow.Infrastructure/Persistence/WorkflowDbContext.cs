@@ -14,6 +14,9 @@ public sealed class WorkflowDbContext : DbContext
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<OrgMemberEntity> OrgMembers => Set<OrgMemberEntity>();
 
+    public DbSet<OrgMemberAuditEntity> OrgMemberAudits => Set<OrgMemberAuditEntity>();
+    public DbSet<OrgInvitationEntity> OrgInvitations => Set<OrgInvitationEntity>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -67,8 +70,63 @@ public sealed class WorkflowDbContext : DbContext
             b.Property(x => x.Role).HasColumnName("role").IsRequired();
             b.Property(x => x.JoinedAt).HasColumnName("joined_at").IsRequired();
 
+            b.Property(x => x.IsDeleted).HasColumnName("is_deleted").IsRequired();
+            b.Property(x => x.DeletedAtUtc).HasColumnName("deleted_at_utc");
+            b.Property(x => x.DeletedByUserId).HasColumnName("deleted_by_user_id");
+
             b.HasIndex(x => x.OrganizationId);
             b.HasIndex(x => x.UserId);
+            b.HasIndex(x => new { x.OrganizationId, x.IsDeleted }).HasDatabaseName("IX_org_members_organization_id_is_deleted");
+        });
+
+        modelBuilder.Entity<OrgMemberAuditEntity>(b =>
+        {
+            b.ToTable("org_member_audit");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id).HasColumnName("id");
+            b.Property(x => x.OrganizationId).HasColumnName("organization_id").IsRequired();
+            b.Property(x => x.ActorUserId).HasColumnName("actor_user_id").IsRequired();
+            b.Property(x => x.TargetUserId).HasColumnName("target_user_id").IsRequired();
+
+            b.Property(x => x.Action).HasColumnName("action").IsRequired();
+            b.Property(x => x.FromRole).HasColumnName("from_role");
+            b.Property(x => x.ToRole).HasColumnName("to_role");
+
+            b.Property(x => x.OccurredAt).HasColumnName("occurred_at").IsRequired();
+
+            b.HasIndex(x => x.OrganizationId).HasDatabaseName("IX_org_member_audit_organization_id");
+            b.HasIndex(x => x.ActorUserId).HasDatabaseName("IX_org_member_audit_actor_user_id");
+            b.HasIndex(x => x.TargetUserId).HasDatabaseName("IX_org_member_audit_target_user_id");
+            b.HasIndex(x => x.OccurredAt).HasDatabaseName("IX_org_member_audit_occurred_at");
+        });
+
+        modelBuilder.Entity<OrgInvitationEntity>(b =>
+        {
+            b.ToTable("org_invitations");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id).HasColumnName("id");
+            b.Property(x => x.OrganizationId).HasColumnName("organization_id").IsRequired();
+
+            b.Property(x => x.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
+            b.Property(x => x.Role).HasColumnName("role").IsRequired();
+
+            b.Property(x => x.Token).HasColumnName("token").HasMaxLength(80).IsRequired();
+            b.Property(x => x.ExpiresAtUtc).HasColumnName("expires_at_utc").IsRequired();
+
+            b.Property(x => x.CreatedByUserId).HasColumnName("created_by_user_id").IsRequired();
+            b.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+
+            b.Property(x => x.AcceptedByUserId).HasColumnName("accepted_by_user_id");
+            b.Property(x => x.AcceptedAtUtc).HasColumnName("accepted_at_utc");
+
+            b.Property(x => x.RevokedByUserId).HasColumnName("revoked_by_user_id");
+            b.Property(x => x.RevokedAtUtc).HasColumnName("revoked_at_utc");
+
+            b.HasIndex(x => x.OrganizationId).HasDatabaseName("IX_org_invitations_organization_id");
+            b.HasIndex(x => x.Email).HasDatabaseName("IX_org_invitations_email");
+            b.HasIndex(x => x.Token).IsUnique().HasDatabaseName("UX_org_invitations_token");
         });
     }
 }
