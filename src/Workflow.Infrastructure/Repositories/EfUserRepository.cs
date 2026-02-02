@@ -12,35 +12,57 @@ public sealed class EfUserRepository : IUserRepository
 
     public EfUserRepository(WorkflowDbContext db) => _db = db;
 
-    public Task AddAsync(User user, CancellationToken ct)
+    public async Task AddAsync(User user, CancellationToken ct)
     {
         var entity = new UserEntity
         {
             Id = user.Id,
             Email = user.Email,
-            DisplayName = user.DisplayName
+            DisplayName = user.DisplayName,
+            PasswordHash = user.PasswordHash
         };
 
         _db.Users.Add(entity);
-        return Task.CompletedTask; // SaveChanges via UnitOfWork
+
+        // NOTE: if you are using UnitOfWork, prefer not saving here.
+        // Keep this ONLY if the rest of your repos also save here.
+        // Ideally remove this line and rely on uow.SaveChangesAsync.
+        await _db.SaveChangesAsync(ct);
     }
 
     public async Task<User?> GetAsync(Guid id, CancellationToken ct)
     {
-        var e = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        return e is null ? null : new User(e.Id, e.Email, e.DisplayName);
+        var entity = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id, ct);
+
+        return entity is null
+            ? null
+            : new User(entity.Id, entity.Email, entity.DisplayName, entity.PasswordHash);
     }
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken ct)
     {
-        var norm = email.Trim().ToLowerInvariant();
-        var e = await _db.Users.AsNoTracking().FirstOrDefaultAsync(x => x.Email == norm, ct);
-        return e is null ? null : new User(e.Id, e.Email, e.DisplayName);
+        var normalized = email.Trim().ToLowerInvariant();
+
+        var entity = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == normalized, ct);
+
+        return entity is null
+            ? null
+            : new User(entity.Id, entity.Email, entity.DisplayName, entity.PasswordHash);
     }
 
     public async Task<IReadOnlyList<User>> ListAsync(CancellationToken ct)
     {
-        var list = await _db.Users.AsNoTracking().OrderBy(x => x.DisplayName).ToListAsync(ct);
-        return list.Select(x => new User(x.Id, x.Email, x.DisplayName)).ToList();
+        var entities = await _db.Users
+            .AsNoTracking()
+            .OrderBy(x => x.Email)
+            .ToListAsync(ct);
+
+        return entities
+            .Select(x => new User(x.Id, x.Email, x.DisplayName, x.PasswordHash))
+            .ToList();
     }
 }

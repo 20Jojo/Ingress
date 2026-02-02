@@ -1,5 +1,5 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Workflow.Api.Common;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Users;
@@ -23,26 +23,34 @@ public static class OrganizationEndpoints
             IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            // Require acting user
-            var actingUserIdResult = TryGetActingUserId(http);
-            if (actingUserIdResult is not null) return actingUserIdResult;
-            var actingUserId = GetActingUserId(http);
+            // Read acting user from JWT
+            var rawUserId = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var actingUserId) || actingUserId == Guid.Empty)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "Unauthorized",
+                    detail: "Missing or invalid user identity in token.");
+            }
 
             // Ensure caller exists as a User
             var actingUser = await users.GetAsync(actingUserId, ct);
             if (actingUser is null)
-                return Results.Unauthorized();
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status401Unauthorized,
+                    title: "Unauthorized",
+                    detail: "User not found for this token.");
+            }
 
             if (string.IsNullOrWhiteSpace(req.Name))
                 return Results.BadRequest(new { message = "Organization name is required." });
 
             // Create org
-            var org = new Organization(Guid.NewGuid(), req.Name);
-
+            var org = new Organization(Guid.NewGuid(), req.Name.Trim());
             await orgs.AddAsync(org, ct);
 
             // BOOTSTRAP: creator becomes Owner
-            // Use UTC to avoid Postgres timestamptz offset issues.
             var ownerMember = OrgMember.Create(org.Id, actingUserId, OrgRole.Owner);
             await members.AddAsync(ownerMember, ct);
 
@@ -76,24 +84,5 @@ public static class OrganizationEndpoints
         return app;
     }
 
-    // Keep this record PUBLIC so FluentValidation can find it (your validator error was because it couldn't).
     public sealed record CreateOrganizationRequest(string Name);
-
-    // --- Header helpers ---
-
-    private static IResult? TryGetActingUserId(HttpContext http)
-    {
-        if (!http.Request.Headers.TryGetValue("X-User-Id", out var raw) ||
-            string.IsNullOrWhiteSpace(raw) ||
-            !Guid.TryParse(raw.ToString(), out _))
-        {
-            // If you're using ProblemDetails, return a clean 401 problem
-            return Results.Unauthorized();
-        }
-
-        return null;
-    }
-
-    private static Guid GetActingUserId(HttpContext http)
-        => Guid.Parse(http.Request.Headers["X-User-Id"].ToString());
 }

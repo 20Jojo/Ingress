@@ -13,6 +13,7 @@ public sealed class WorkflowDbContext : DbContext
 
     public DbSet<UserEntity> Users => Set<UserEntity>();
     public DbSet<OrgMemberEntity> OrgMembers => Set<OrgMemberEntity>();
+    public DbSet<RefreshTokenEntity> RefreshTokens => Set<RefreshTokenEntity>();
 
     public DbSet<OrgMemberAuditEntity> OrgMemberAudits => Set<OrgMemberAuditEntity>();
     public DbSet<OrgInvitationEntity> OrgInvitations => Set<OrgInvitationEntity>();
@@ -55,10 +56,17 @@ public sealed class WorkflowDbContext : DbContext
         {
             b.ToTable("users");
             b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id).HasColumnName("id");
             b.Property(x => x.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
             b.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(120).IsRequired();
+
+            // IMPORTANT: match your DB column name
+            b.Property(x => x.PasswordHash).HasColumnName("password_hash").HasColumnType("text").IsRequired();
+
             b.HasIndex(x => x.Email).IsUnique();
         });
+
 
         modelBuilder.Entity<OrgMemberEntity>(b =>
         {
@@ -127,6 +135,30 @@ public sealed class WorkflowDbContext : DbContext
             b.HasIndex(x => x.OrganizationId).HasDatabaseName("IX_org_invitations_organization_id");
             b.HasIndex(x => x.Email).HasDatabaseName("IX_org_invitations_email");
             b.HasIndex(x => x.Token).IsUnique().HasDatabaseName("UX_org_invitations_token");
+        });
+
+        modelBuilder.Entity<RefreshTokenEntity>(b =>
+        {
+            b.ToTable("refresh_tokens");
+            b.HasKey(x => x.Id);
+
+            b.Property(x => x.Id).HasColumnName("id");
+            b.Property(x => x.UserId).HasColumnName("user_id");
+
+            b.Property(x => x.TokenHash)
+                .HasColumnName("token_hash")
+                .HasMaxLength(64)
+                .IsRequired();
+
+            b.Property(x => x.CreatedAtUtc).HasColumnName("created_at_utc").IsRequired();
+            b.Property(x => x.ExpiresAtUtc).HasColumnName("expires_at_utc").IsRequired();
+            b.Property(x => x.RevokedAtUtc).HasColumnName("revoked_at_utc");
+            b.Property(x => x.ReplacedByTokenHash)
+                .HasColumnName("replaced_by_token_hash")
+                .HasMaxLength(64);
+
+            b.HasIndex(x => x.TokenHash).IsUnique();
+            b.HasIndex(x => x.UserId);
         });
     }
 }

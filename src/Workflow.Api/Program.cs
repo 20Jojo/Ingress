@@ -1,8 +1,10 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text;
+using System.Text.Json.Serialization;
 using FluentValidation;
-using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Workflow.Api.Auth;
 using Workflow.Api.Endpoints;
 using Workflow.Api.Middleware;
@@ -20,67 +22,32 @@ var builder = WebApplication.CreateBuilder(args);
 // ---- Core services
 builder.Services.AddHttpContextAccessor();
 
-// ---- Auth: our custom header-based authentication
-builder.Services
-    .AddAuthentication(CallerAuthenticationHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, CallerAuthenticationHandler>(
-        CallerAuthenticationHandler.SchemeName,
-        _ => { });
-
-// ---- Authorization policies (single source of truth)
-builder.Services.AddAuthorization(options =>
-{
-    options.AddPolicy("OrgMember", p =>
-        p.AddAuthenticationSchemes(CallerAuthenticationHandler.SchemeName)
-         .RequireAuthenticatedUser()
-         .AddRequirements(new OrgRoleRequirement(OrgRole.Member)));
-
-    options.AddPolicy("OrgAdmin", p =>
-        p.AddAuthenticationSchemes(CallerAuthenticationHandler.SchemeName)
-         .RequireAuthenticatedUser()
-         .AddRequirements(new OrgRoleRequirement(OrgRole.Admin)));
-
-    options.AddPolicy("OrgOwner", p =>
-        p.AddAuthenticationSchemes(CallerAuthenticationHandler.SchemeName)
-         .RequireAuthenticatedUser()
-         .AddRequirements(new OrgRoleRequirement(OrgRole.Owner)));
-});
-
-// Register handler
-builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
-builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthorizationMiddlewareResultHandler>();
-
-
-// Swagger + OpenAPI
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// ProblemDetails
+// ---- ProblemDetails
 builder.Services.AddProblemDetails();
 
-// JSON options
+// ---- JSON options
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-// FluentValidation
+// ---- FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Middleware
+// ---- Middleware
 builder.Services.AddTransient<ExceptionHandlingMiddleware>();
 
-// DbContext
+// ---- DbContext
 builder.Services.AddDbContext<WorkflowDbContext>(opt =>
 {
     var cs = builder.Configuration.GetConnectionString("WorkflowDb");
     opt.UseNpgsql(cs);
 });
 
-// Unit of Work
+// ---- Unit of Work
 builder.Services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
-// Repositories
+// ---- Repositories
 builder.Services.AddScoped<IOrganizationRepository, EfOrganizationRepository>();
 builder.Services.AddScoped<IProjectRepository, EfProjectRepository>();
 builder.Services.AddScoped<ITaskRepository, EfTaskRepository>();
@@ -88,14 +55,74 @@ builder.Services.AddScoped<IUserRepository, EfUserRepository>();
 builder.Services.AddScoped<IOrgMemberRepository, EfOrgMemberRepository>();
 builder.Services.AddScoped<IOrgMemberAuditRepository, EfOrgMemberAuditRepository>();
 builder.Services.AddScoped<IOrgInvitationRepository, EfOrgInvitationRepository>();
+builder.Services.AddScoped<RefreshTokenService>();
+builder.Services.AddScoped<IRefreshTokenRepository, EfRefreshTokenRepository>();
+builder.Services.AddScoped<PasswordHasher>();
+
+// ---- JWT settings + token service
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.AddScoped<JwtTokenService>();
+
+// ---- Auth: JWT Bearer (REPLACES X-User-Id COMPLETELY)
+var jwtSection = builder.Configuration.GetSection("Jwt");
+var jwtKey = jwtSection["SigningKey"];
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException("Missing Jwt:SigningKey in configuration.");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false; // local dev
+        options.SaveToken = true;
+
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSection["Issuer"],
+
+            ValidateAudience = true,
+            ValidAudience = jwtSection["Audience"],
+
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+
+// ---- Authorization policies (single source of truth)
+builder.Services.AddAuthorization(options =>
+{
+    // Generic "authenticated user"
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+
+    options.AddPolicy("OrgMember", p =>
+        p.RequireAuthenticatedUser()
+         .AddRequirements(new OrgRoleRequirement(OrgRole.Member)));
+
+    options.AddPolicy("OrgAdmin", p =>
+        p.RequireAuthenticatedUser()
+         .AddRequirements(new OrgRoleRequirement(OrgRole.Admin)));
+
+    options.AddPolicy("OrgOwner", p =>
+        p.RequireAuthenticatedUser()
+         .AddRequirements(new OrgRoleRequirement(OrgRole.Owner)));
+});
+
+// Register ONE handler (the real one)
+builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
+
+// Swagger (optional; keep it simple)
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(); 
 
 var app = builder.Build();
 
-// IMPORTANT: Exception middleware should be as early as possible
 app.UseMiddleware<ExceptionHandlingMiddleware>();
-
-app.UseAuthentication();
-app.UseAuthorization();
 
 app.UseStaticFiles();
 
@@ -105,7 +132,11 @@ app.UseSwaggerUI(c =>
     c.InjectJavascript("/swagger-user.js");
 });
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 // Endpoints
+app.MapAuthEndpoints();          // NEW
 app.MapOrganizationEndpoints();
 app.MapProjectEndpoints();
 app.MapTaskEndpoints();

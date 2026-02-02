@@ -1,7 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
-using Workflow.Application.Common;
-using Workflow.Application.Users;
-using Workflow.Domain.Users;
+﻿using Workflow.Application.Users;
 
 namespace Workflow.Api.Endpoints;
 
@@ -11,27 +8,11 @@ public static class UserEndpoints
     {
         var group = app.MapGroup("/users").WithTags("Users");
 
-        group.MapPost("", async (
-            [FromBody] CreateUserRequest req,
-            IUserRepository users,
-            IUnitOfWork uow,
-            CancellationToken ct) =>
-        {
-            var existing = await users.GetByEmailAsync(req.Email, ct);
-            if (existing is not null)
-                return Results.Conflict(new { message = "Email already exists." });
+        // If you want these locked to any authenticated user:
+        group.RequireAuthorization();
 
-            var user = new User(Guid.NewGuid(), req.Email, req.DisplayName);
-            await users.AddAsync(user, ct);
-            await uow.SaveChangesAsync(ct);
-
-            return Results.Created($"/users/{user.Id}", new
-            {
-                user.Id,
-                user.Email,
-                user.DisplayName
-            });
-        });
+        // If you want ONLY admins/owners later, we can add a policy.
+        // group.RequireAuthorization("OrgAdmin");
 
         group.MapGet("", async (IUserRepository users, CancellationToken ct) =>
         {
@@ -43,12 +24,10 @@ public static class UserEndpoints
         {
             var user = await users.GetAsync(userId, ct);
             return user is null
-                ? Results.NotFound()
+                ? Results.NotFound(new { message = "User not found." })
                 : Results.Ok(new { user.Id, user.Email, user.DisplayName });
         });
 
         return app;
     }
-
-    public sealed record CreateUserRequest(string Email, string DisplayName);
 }
