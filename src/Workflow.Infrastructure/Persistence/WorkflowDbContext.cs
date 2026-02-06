@@ -55,18 +55,25 @@ public sealed class WorkflowDbContext : DbContext
         modelBuilder.Entity<UserEntity>(b =>
         {
             b.ToTable("users");
+
             b.HasKey(x => x.Id);
+            b.Property(x => x.Id)
+                .HasColumnName("Id");   
 
-            b.Property(x => x.Id).HasColumnName("id");
-            b.Property(x => x.Email).HasColumnName("email").HasMaxLength(320).IsRequired();
-            b.Property(x => x.DisplayName).HasColumnName("display_name").HasMaxLength(120).IsRequired();
+            b.Property(x => x.Email)
+                .HasColumnName("email")
+                .HasMaxLength(320)
+                .IsRequired();
 
-            // IMPORTANT: match your DB column name
-            b.Property(x => x.PasswordHash).HasColumnName("password_hash").HasColumnType("text").IsRequired();
+            b.Property(x => x.DisplayName)
+                .HasColumnName("display_name")
+                .HasMaxLength(120)
+                .IsRequired();
 
-            b.HasIndex(x => x.Email).IsUnique();
+            b.Property(x => x.PasswordHash)
+                .HasColumnName("PasswordHash")
+                .IsRequired();
         });
-
 
         modelBuilder.Entity<OrgMemberEntity>(b =>
         {

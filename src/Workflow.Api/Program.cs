@@ -16,6 +16,9 @@ using Workflow.Application.Users;
 using Workflow.Domain.Organizations;
 using Workflow.Infrastructure.Persistence;
 using Workflow.Infrastructure.Repositories;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -113,12 +116,61 @@ builder.Services.AddAuthorization(options =>
          .AddRequirements(new OrgRoleRequirement(OrgRole.Owner)));
 });
 
+// ---- Rate limiting (global + auth policy)
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // GLOBAL limiter: per user if authenticated, else per IP
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+    {
+        var userId = http.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        var key = !string.IsNullOrWhiteSpace(userId)
+            ? $"user:{userId}"
+            : $"ip:{http.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: key,
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 100,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+            });
+    });
+
+    // Strict limiter for /auth: per IP
+    options.AddPolicy("Auth", http =>
+    {
+        var ip = http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: $"auth:{ip}",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0
+            });
+    });
+
+    // Nice JSON response on 429
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "Too many requests. Please slow down."
+        }, cancellationToken: token);
+    };
+});
+
 // Register ONE handler (the real one)
 builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
 
 // Swagger (optional; keep it simple)
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); 
+builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
@@ -129,11 +181,12 @@ app.UseStaticFiles();
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
-    c.InjectJavascript("/swagger-user.js");
+    c.InjectJavascript("/swagger-ui/userid.js");
 });
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 // Endpoints
 app.MapAuthEndpoints();          // NEW

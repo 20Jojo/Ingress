@@ -12,8 +12,31 @@ public sealed class EfOrgMemberRepository : IOrgMemberRepository
 
     public EfOrgMemberRepository(WorkflowDbContext db) => _db = db;
 
-    public Task AddAsync(OrgMember member, CancellationToken ct)
+    public async Task AddAsync(OrgMember member, CancellationToken ct)
     {
+        // If an entry already exists (including soft-deleted), reuse it to avoid PK conflicts.
+        var existing = await _db.OrgMembers
+            .FirstOrDefaultAsync(x => x.OrganizationId == member.OrganizationId && x.UserId == member.UserId, ct);
+
+        if (existing is not null)
+        {
+            if (existing.IsDeleted)
+            {
+                // Undelete and refresh fields
+                existing.IsDeleted = false;
+                existing.DeletedAtUtc = null;
+                existing.DeletedByUserId = null;
+                existing.Role = (int)member.Role;
+                existing.JoinedAt = member.JoinedAt;
+            }
+            else
+            {
+                // Already present and active — nothing to do.
+            }
+
+            return; // UoW will persist changes
+        }
+
         var entity = new OrgMemberEntity
         {
             OrganizationId = member.OrganizationId,
@@ -27,7 +50,7 @@ public sealed class EfOrgMemberRepository : IOrgMemberRepository
         };
 
         _db.OrgMembers.Add(entity);
-        return Task.CompletedTask; // UoW commits
+        // UoW will persist
     }
 
     public async Task<bool> ExistsAsync(Guid orgId, Guid userId, CancellationToken ct)
