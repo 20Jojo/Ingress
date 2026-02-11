@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using System.Text.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Distributed;
+using Workflow.Api.Common;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Users;
@@ -14,22 +17,43 @@ public static class OrgMemberEndpoints
             .WithTags("Org Members");
 
         // ─────────────────────────────────────────────
-        // Admin+ : list members
+        // Admin+ : list members (cached)
         // ─────────────────────────────────────────────
         group.MapGet("", async (
             Guid orgId,
             IOrgMemberRepository members,
+            IDistributedCache cache,
             CancellationToken ct) =>
         {
+            var cacheKey = CacheKeys.OrgMembers(orgId);
+
+            var cached = await cache.GetStringAsync(cacheKey, ct);
+            if (!string.IsNullOrWhiteSpace(cached))
+            {
+                var cachedPayload = JsonSerializer.Deserialize<object>(cached);
+                return Results.Ok(cachedPayload);
+            }
+
             var list = await members.ListByOrgAsync(orgId, ct);
 
-            return Results.Ok(list.Select(m => new
+            var payload = list.Select(m => new
             {
                 m.OrganizationId,
                 m.UserId,
                 Role = m.Role.ToString(),
                 m.JoinedAt
-            }));
+            }).ToList();
+
+            await cache.SetStringAsync(
+                cacheKey,
+                JsonSerializer.Serialize(payload),
+                new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
+                },
+                ct);
+
+            return Results.Ok(payload);
         })
         .RequireAuthorization("OrgAdmin");
 
@@ -45,6 +69,7 @@ public static class OrgMemberEndpoints
             IOrgMemberRepository members,
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
+            IDistributedCache cache,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -57,15 +82,12 @@ public static class OrgMemberEndpoints
             if (user is null)
                 return Results.NotFound(new { message = "User not found." });
 
-            // Parse role
             if (!TryParseRole(req.Role, out var requestedRole, out var badRoleProblem))
                 return badRoleProblem!;
 
-            // Only Owner may add Owner
             if (requestedRole == OrgRole.Owner && actingRole != OrgRole.Owner)
                 return Forbidden("Only an Owner can add another Owner.");
 
-            // Friendly duplicate membership
             if (await members.ExistsAsync(orgId, req.UserId, ct))
                 return Results.Conflict(new { message = "User is already a member of this organization." });
 
@@ -84,6 +106,9 @@ public static class OrgMemberEndpoints
 
             await uow.SaveChangesAsync(ct);
 
+            // invalidate cache
+            await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
+
             return Results.Created($"/orgs/{orgId}/members", new
             {
                 member.OrganizationId,
@@ -95,9 +120,7 @@ public static class OrgMemberEndpoints
         .RequireAuthorization("OrgAdmin");
 
         // ─────────────────────────────────────────────
-        // Admin+ : change role
-        // BUT: only Owner can actually change roles (we enforce with polite messages)
-        // Enforces ≥ 1 owner invariant
+        // Admin+ : change role (polite errors)
         // ─────────────────────────────────────────────
         group.MapPatch("/{userId:guid}/role", async (
             HttpContext ctx,
@@ -107,6 +130,7 @@ public static class OrgMemberEndpoints
             IOrgMemberRepository members,
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
+            IDistributedCache cache,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -122,29 +146,22 @@ public static class OrgMemberEndpoints
             if (!TryParseRole(req.Role, out var newRole, out var badRoleProblem))
                 return badRoleProblem!;
 
-            // Only Owner can change roles (but we let Admin reach here to return a nice message)
             if (actorRole != OrgRole.Owner)
             {
-                // If they specifically tried to make someone Owner, explain that too
                 if (newRole == OrgRole.Owner)
                     return Forbidden("Only an Owner can promote someone to Owner.");
 
                 return Forbidden("Only an Owner can change member roles.");
             }
 
-            // Optional: prevent pointless updates
             if (currentRole.Value == newRole)
                 return Results.Ok(new { organizationId = orgId, userId, role = newRole.ToString() });
 
-            // Invariant: org must always have ≥ 1 owner
             if (currentRole == OrgRole.Owner && newRole != OrgRole.Owner)
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                {
-                    return Conflict(
-                        "You can’t demote the last Owner. Promote another Owner first, then retry.");
-                }
+                    return Conflict("You can’t demote the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.UpdateRoleAsync(orgId, userId, newRole, ct);
@@ -161,19 +178,15 @@ public static class OrgMemberEndpoints
 
             await uow.SaveChangesAsync(ct);
 
-            return Results.Ok(new
-            {
-                organizationId = orgId,
-                userId,
-                role = newRole.ToString()
-            });
+            // invalidate cache
+            await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
+
+            return Results.Ok(new { organizationId = orgId, userId, role = newRole.ToString() });
         })
-        .RequireAuthorization("OrgAdmin"); // <- IMPORTANT: NOT OrgOwner
+        .RequireAuthorization("OrgAdmin");
 
         // ─────────────────────────────────────────────
         // Admin+ : remove member (soft delete)
-        // BUT: only Owner can actually remove (we enforce with polite messages)
-        // Enforces ≥ 1 owner invariant
         // ─────────────────────────────────────────────
         group.MapDelete("/{userId:guid}", async (
             HttpContext ctx,
@@ -182,6 +195,7 @@ public static class OrgMemberEndpoints
             IOrgMemberRepository members,
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
+            IDistributedCache cache,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -194,19 +208,14 @@ public static class OrgMemberEndpoints
             if (targetRole is null)
                 return Results.NotFound(new { message = "Target user is not a member of this organization." });
 
-            // Only Owner can remove members (but we let Admin reach here to return a nice message)
             if (actorRole != OrgRole.Owner)
                 return Forbidden("Only an Owner can remove members.");
 
-            // Invariant: org must always have ≥ 1 owner
             if (targetRole == OrgRole.Owner)
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                {
-                    return Conflict(
-                        "You can’t remove the last Owner. Promote another Owner first, then retry.");
-                }
+                    return Conflict("You can’t remove the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.RemoveAsync(orgId, userId, actorUserId, ct);
@@ -223,9 +232,12 @@ public static class OrgMemberEndpoints
 
             await uow.SaveChangesAsync(ct);
 
+            // invalidate cache
+            await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
+
             return Results.NoContent();
         })
-        .RequireAuthorization("OrgAdmin"); // <- IMPORTANT: NOT OrgOwner
+        .RequireAuthorization("OrgAdmin");
 
         return app;
     }
@@ -233,9 +245,6 @@ public static class OrgMemberEndpoints
     public sealed record AddMemberRequest(Guid UserId, string? Role);
     public sealed record ChangeRoleRequest(string? Role);
 
-    // ─────────────────────────────────────────────
-    // helpers
-    // ─────────────────────────────────────────────
     private static Guid GetActorUserId(HttpContext ctx)
         => Guid.Parse(ctx.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
 

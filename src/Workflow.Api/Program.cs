@@ -19,6 +19,7 @@ using Workflow.Infrastructure.Repositories;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Distributed;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -172,6 +173,13 @@ builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// Redis (IDistributedCache)
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.InstanceName = "workflow:";
+});
+
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -184,9 +192,9 @@ app.UseSwaggerUI(c =>
     c.InjectJavascript("/swagger-ui/userid.js");
 });
 
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseRateLimiter();
 
 // Endpoints
 app.MapAuthEndpoints();          // NEW
