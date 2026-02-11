@@ -321,7 +321,7 @@ namespace Workflow.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
-                        .HasColumnName("id");
+                        .HasColumnName("Id");
 
                     b.Property<string>("DisplayName")
                         .IsRequired()
@@ -338,12 +338,9 @@ namespace Workflow.Infrastructure.Persistence.Migrations
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("password_hash");
+                        .HasColumnName("PasswordHash");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
 
                     b.ToTable("users", (string)null);
                 });

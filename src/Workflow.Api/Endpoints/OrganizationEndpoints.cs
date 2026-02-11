@@ -1,4 +1,4 @@
-using System.Security.Claims;
+﻿using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
@@ -13,7 +13,7 @@ public static class OrganizationEndpoints
     {
         var group = app.MapGroup("/orgs").WithTags("Organizations");
 
-        // POST /orgs  (BOOTSTRAP OWNER)
+        // POST /orgs  (creator becomes OWNER)
         group.MapPost("", async (
             [FromBody] CreateOrganizationRequest req,
             HttpContext http,
@@ -23,57 +23,48 @@ public static class OrganizationEndpoints
             IUnitOfWork uow,
             CancellationToken ct) =>
         {
-            // Read acting user from JWT
             var rawUserId = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrWhiteSpace(rawUserId) || !Guid.TryParse(rawUserId, out var actingUserId) || actingUserId == Guid.Empty)
+            if (!Guid.TryParse(rawUserId, out var userId))
             {
-                return Results.Problem(
-                    statusCode: StatusCodes.Status401Unauthorized,
-                    title: "Unauthorized",
-                    detail: "Missing or invalid user identity in token.");
+                return Results.Unauthorized();
             }
 
-            // Ensure caller exists as a User
-            var actingUser = await users.GetAsync(actingUserId, ct);
-            if (actingUser is null)
-            {
-                return Results.Problem(
-                    statusCode: StatusCodes.Status401Unauthorized,
-                    title: "Unauthorized",
-                    detail: "User not found for this token.");
-            }
+            var user = await users.GetAsync(userId, ct);
+            if (user is null)
+                return Results.Unauthorized();
 
             if (string.IsNullOrWhiteSpace(req.Name))
                 return Results.BadRequest(new { message = "Organization name is required." });
 
-            // Create org
             var org = new Organization(Guid.NewGuid(), req.Name.Trim());
             await orgs.AddAsync(org, ct);
 
-            // BOOTSTRAP: creator becomes Owner
-            var ownerMember = OrgMember.Create(org.Id, actingUserId, OrgRole.Owner);
-            await members.AddAsync(ownerMember, ct);
+            var owner = OrgMember.Create(org.Id, userId, OrgRole.Owner);
+            await members.AddAsync(owner, ct);
 
             await uow.SaveChangesAsync(ct);
 
             return Results.Created($"/orgs/{org.Id}", new
             {
-                id = org.Id,
-                name = org.Name,
-                ownerUserId = actingUserId,
-                ownerRole = OrgRole.Owner.ToString()
+                org.Id,
+                org.Name
             });
         });
 
         // GET /orgs
-        group.MapGet("", async (IOrganizationRepository orgs, CancellationToken ct) =>
+        group.MapGet("", async (
+            IOrganizationRepository orgs,
+            CancellationToken ct) =>
         {
             var list = await orgs.ListAsync(ct);
             return Results.Ok(list.Select(o => new { o.Id, o.Name }));
         });
 
         // GET /orgs/{orgId}
-        group.MapGet("/{orgId:guid}", async (Guid orgId, IOrganizationRepository orgs, CancellationToken ct) =>
+        group.MapGet("/{orgId:guid}", async (
+            Guid orgId,
+            IOrganizationRepository orgs,
+            CancellationToken ct) =>
         {
             var org = await orgs.GetAsync(orgId, ct);
             return org is null

@@ -42,7 +42,13 @@ public static class AuthEndpoints
             await users.AddAsync(user, ct);
             await uow.SaveChangesAsync(ct);
 
-            return Results.Created($"/users/{user.Id}", new { user.Id, user.Email, user.DisplayName });
+            // Don't return password hash
+            return Results.Created($"/users/{user.Id}", new
+            {
+                user.Id,
+                user.Email,
+                user.DisplayName
+            });
         })
         .AllowAnonymous();
 
