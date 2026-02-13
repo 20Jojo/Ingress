@@ -1,4 +1,4 @@
-using System.Text;
+ï»¿using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.OpenApi;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -192,7 +193,7 @@ builder.Services.AddSwaggerGen(c =>
          Description = "Paste ONLY the token (no 'Bearer ' prefix)."
      });
 
-     // Apply Bearer globally (so you don’t have to set it per endpoint)
+     // Apply Bearer globally (so you donï¿½t have to set it per endpoint)
      c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         {
@@ -210,6 +211,17 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.InstanceName = "workflow:";
 });
 
+
+// Health checks (liveness/readiness)
+builder.Services.AddHealthChecks()
+    .AddNpgSql(
+        builder.Configuration.GetConnectionString("WorkflowDb")!,
+        name: "postgres",
+        tags: new[] { "ready" })
+    .AddRedis(
+        builder.Configuration.GetConnectionString("Redis")!,
+        name: "redis",
+        tags: new[] { "ready" });
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -234,6 +246,16 @@ app.MapTaskEndpoints();
 app.MapUserEndpoints();
 app.MapOrgMemberEndpoints();
 app.MapOrgInvitationEndpoints();
+
+app.MapHealthChecks("/health/live", new HealthCheckOptions
+{
+    Predicate = _ => false
+}).AllowAnonymous();
+
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready")
+}).AllowAnonymous();
 
 app.Run();
 
