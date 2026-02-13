@@ -22,11 +22,60 @@ using System.Security.Claims;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.OpenApi;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ---- Core services
 builder.Services.AddHttpContextAccessor();
+
+// ---- OpenTelemetry
+var otelSection = builder.Configuration.GetSection("OpenTelemetry");
+var otelServiceName = otelSection["ServiceName"] ?? "workflow-api";
+var otlpEndpoint = otelSection["OtlpEndpoint"] ?? "http://localhost:4317";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(
+        serviceName: otelServiceName,
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString() ?? "dev"))
+    .WithTracing(tracing =>
+    {
+        tracing
+            .AddAspNetCoreInstrumentation(opt =>
+            {
+                opt.RecordException = true;
+                opt.EnrichWithHttpRequest = (activity, request) =>
+                {
+                    activity.SetTag("http.request_content_length", request.ContentLength);
+                };
+                opt.EnrichWithHttpResponse = (activity, response) =>
+                {
+                    activity.SetTag("http.response_content_length", response.ContentLength);
+                };
+            })
+            .AddHttpClientInstrumentation(o => o.RecordException = true)
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddRedisInstrumentation()
+            .AddOtlpExporter(o =>
+            {
+                o.Endpoint = new Uri(otlpEndpoint);
+            });
+
+        Npgsql.TracerProviderBuilderExtensions.AddNpgsql(tracing);
+    })
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter(o =>
+            {
+                o.Endpoint = new Uri(otlpEndpoint);
+            });
+    });
 
 // ---- ProblemDetails
 builder.Services.AddProblemDetails();
