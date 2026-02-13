@@ -30,8 +30,34 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build:
+      context: .
+      dockerfile: src/Workflow.Api/Dockerfile
+    container_name: workflow-api
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__WorkflowDb: Host=postgres;Port=5432;Database=workflowdb;Username=workflow;Password=joe@22
+      ConnectionStrings__Redis: redis:6379
+      Jwt__Issuer: Workflow.Api
+      Jwt__Audience: Workflow.Client
+      Jwt__SigningKey: "change-this-to-a-long-random-secret-at-least-32-chars"
+      Jwt__AccessTokenMinutes: "60"
+      Jwt__RefreshTokenDays: "14"
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health/ready || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   workflow_pgdata:
-    external: true
-    name: 4947730b54c0d79a9f108a7219c669f91605498e454f1259d796aa6a8debf69d
   workflow_redisdata:
