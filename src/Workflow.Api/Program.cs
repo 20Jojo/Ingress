@@ -78,6 +78,7 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.MapInboundClaims = true; // keep ClaimTypes.NameIdentifier available
         options.RequireHttpsMetadata = false; // local dev
         options.SaveToken = true;
 
@@ -237,4 +238,7 @@ app.MapOrgInvitationEndpoints();
 app.Run();
 
 
+
+
+public partial class Program { }
 
