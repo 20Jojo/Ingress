@@ -44,6 +44,8 @@ services:
       Jwt__SigningKey: "change-this-to-a-long-random-secret-at-least-32-chars"
       Jwt__AccessTokenMinutes: "60"
       Jwt__RefreshTokenDays: "14"
+      OpenTelemetry__ServiceName: workflow-api
+      OpenTelemetry__OtlpEndpoint: http://otel-collector:4317
     ports:
       - "8080:8080"
     healthcheck:
@@ -57,6 +59,35 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.96.0
+    container_name: workflow-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "9464:9464"
+    depends_on:
+      - jaeger
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: workflow-jaeger
+    ports:
+      - "16686:16686"
+
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    container_name: workflow-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml:ro
 
 volumes:
   workflow_pgdata:
