@@ -1,4 +1,4 @@
-ï»¿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -20,6 +20,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.OpenApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -171,7 +172,35 @@ builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>()
 
 // Swagger (optional; keep it simple)
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+ {
+     c.SwaggerDoc("v1", new OpenApiInfo
+     {
+         Title = "Workflow API",
+         Version = "v1"
+     });
+
+     // Tell Swagger about Bearer auth
+     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+     {
+         Name = "Authorization",
+         Type = SecuritySchemeType.Http,
+         Scheme = "bearer",
+         BearerFormat = "JWT",
+         In = ParameterLocation.Header,
+         Description = "Paste ONLY the token (no 'Bearer ' prefix)."
+     });
+
+     // Apply Bearer globally (so you don’t have to set it per endpoint)
+     c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference("Bearer", document, null),
+            new List<string>()
+        }
+    });
+ });
+
 
 // Redis (IDistributedCache)
 builder.Services.AddStackExchangeRedisCache(options =>
@@ -206,3 +235,6 @@ app.MapOrgMemberEndpoints();
 app.MapOrgInvitationEndpoints();
 
 app.Run();
+
+
+
