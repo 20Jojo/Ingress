@@ -1,10 +1,14 @@
-﻿using System.Text;
+using System.Text;
 using System.Text.Json.Serialization;
 using FluentValidation;
+using Hangfire;
+using Hangfire.PostgreSql;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Workflow.Api.Jobs;
 using Workflow.Api.Auth;
 using Workflow.Api.Endpoints;
 using Workflow.Api.Middleware;
@@ -14,6 +18,7 @@ using Workflow.Application.Projects;
 using Workflow.Application.Tasks;
 using Workflow.Application.Users;
 using Workflow.Domain.Organizations;
+using Workflow.Api.Messaging.Consumers;
 using Workflow.Infrastructure.Persistence;
 using Workflow.Infrastructure.Repositories;
 using System.Threading.RateLimiting;
@@ -97,6 +102,50 @@ builder.Services.AddDbContext<WorkflowDbContext>(opt =>
 {
     var cs = builder.Configuration.GetConnectionString("WorkflowDb");
     opt.UseNpgsql(cs);
+});
+var pg = builder.Configuration.GetConnectionString("WorkflowDb");
+if (string.IsNullOrWhiteSpace(pg))
+    throw new InvalidOperationException("Missing ConnectionStrings:WorkflowDb");
+
+builder.Services.AddHangfire(cfg =>
+{
+    cfg.UseSimpleAssemblyNameTypeSerializer()
+       .UseRecommendedSerializerSettings()
+       .UsePostgreSqlStorage(
+        c => c.UseNpgsqlConnection(pg),
+        new PostgreSqlStorageOptions
+        {
+            SchemaName = "hangfire",
+            PrepareSchemaIfNecessary = true
+        });
+});
+
+builder.Services.AddHangfireServer();
+builder.Services.AddScoped<SampleJobs>();
+
+// ---- MassTransit (RabbitMQ)
+builder.Services.AddMassTransit(x =>
+{
+    x.SetKebabCaseEndpointNameFormatter();
+
+    x.AddConsumer<PingConsumer>();
+
+    x.AddEntityFrameworkOutbox<WorkflowDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        var rabbit = builder.Configuration.GetConnectionString("RabbitMq");
+        if (string.IsNullOrWhiteSpace(rabbit))
+            throw new InvalidOperationException("Missing ConnectionStrings:RabbitMq");
+
+        cfg.Host(new Uri(rabbit));
+
+        cfg.ConfigureEndpoints(context);
+    });
 });
 
 // ---- Unit of Work
@@ -242,7 +291,7 @@ builder.Services.AddSwaggerGen(c =>
          Description = "Paste ONLY the token (no 'Bearer ' prefix)."
      });
 
-     // Apply Bearer globally (so you don�t have to set it per endpoint)
+     // Apply Bearer globally (so you don?t have to set it per endpoint)
      c.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
         {
@@ -284,8 +333,31 @@ app.UseSwaggerUI(c =>
 });
 
 app.UseRateLimiter();
-app.UseAuthentication();
-app.UseAuthorization();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new AllowAllDashboardAuthFilter() }
+    });
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+else
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    app.UseHangfireDashboard("/hangfire", new DashboardOptions
+    {
+        Authorization = new[] { new HangfireAuthFilter() }
+    });
+}
+
+RecurringJob.AddOrUpdate<SampleJobs>(
+    "sample-ping",
+    j => j.PingAsync(),
+    Cron.Minutely);
 
 // Endpoints
 app.MapAuthEndpoints();          // NEW
@@ -295,6 +367,13 @@ app.MapTaskEndpoints();
 app.MapUserEndpoints();
 app.MapOrgMemberEndpoints();
 app.MapOrgInvitationEndpoints();
+app.MapMessagingEndpoints();
+app.MapPost("/jobs/ping", (IBackgroundJobClient bg) =>
+{
+    bg.Enqueue<SampleJobs>(j => j.PingAsync());
+    return Results.Accepted(value: new { message = "Enqueued Ping job." });
+})
+.WithTags("Jobs");
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
@@ -312,4 +391,9 @@ app.Run();
 
 
 public partial class Program { }
+
+
+
+
+
 
