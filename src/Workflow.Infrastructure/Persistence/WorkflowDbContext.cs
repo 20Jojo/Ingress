@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 using Workflow.Infrastructure.Persistence.Entities;
 
 namespace Workflow.Infrastructure.Persistence;
@@ -21,6 +22,10 @@ public sealed class WorkflowDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
 
         modelBuilder.Entity<OrganizationEntity>(b =>
         {

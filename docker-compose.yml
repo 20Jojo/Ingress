@@ -30,15 +30,32 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: workflow-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: workflow
+      RABBITMQ_DEFAULT_PASS: joe@22
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: .
       dockerfile: src/Workflow.Api/Dockerfile
     container_name: workflow-api
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__WorkflowDb: Host=postgres;Port=5432;Database=workflowdb;Username=workflow;Password=joe@22
       ConnectionStrings__Redis: redis:6379
+      ConnectionStrings__RabbitMq: amqp://workflow:joe%4022@rabbitmq:5672
       Jwt__Issuer: Workflow.Api
       Jwt__Audience: Workflow.Client
       Jwt__SigningKey: "change-this-to-a-long-random-secret-at-least-32-chars"
@@ -58,6 +75,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       otel-collector:
         condition: service_started
