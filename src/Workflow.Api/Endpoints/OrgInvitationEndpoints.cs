@@ -1,9 +1,11 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Users;
+using Workflow.Api.Messaging.Contracts;
 using Workflow.Domain.Organizations;
 
 namespace Workflow.Api.Endpoints;
@@ -27,6 +29,7 @@ public static class OrgInvitationEndpoints
             IOrgMemberRepository members,
             IOrgInvitationRepository invites,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             // JWT caller id
@@ -82,6 +85,14 @@ public static class OrgInvitationEndpoints
             );
 
             await invites.AddAsync(invitation, ct);
+            await publish.Publish(new OrgInvitationCreated(
+                InvitationId: invitation.Id,
+                OrganizationId: invitation.OrganizationId,
+                Email: invitation.Email,
+                Role: invitation.Role.ToString(),
+                ExpiresAtUtc: invitation.ExpiresAtUtc,
+                CreatedAtUtc: invitation.CreatedAtUtc
+            ), ct);
             await uow.SaveChangesAsync(ct);
 
             return Results.Created($"/invitations/{invitation.Token}/accept", new
@@ -129,6 +140,69 @@ public static class OrgInvitationEndpoints
                 i.RevokedByUserId,
                 i.RevokedAtUtc
             }));
+        });
+
+        // DELETE /orgs/{orgId}/invitations/{invitationId} (revoke invitation)
+        orgGroup.MapDelete("/{invitationId:guid}", async (
+            HttpContext ctx,
+            Guid orgId,
+            Guid invitationId,
+            IOrgMemberRepository members,
+            IOrgInvitationRepository invites,
+            IUnitOfWork uow,
+            IPublishEndpoint publish,
+            CancellationToken ct) =>
+        {
+            if (!TryGetActorUserId(ctx, out var actorUserId))
+                return UnauthorizedMissingBearer();
+
+            var actorRole = await members.GetRoleAsync(orgId, actorUserId, ct);
+            if (actorRole is null)
+                return Forbidden("Caller is not a member of this organization.");
+
+            if (actorRole != OrgRole.Owner && actorRole != OrgRole.Admin)
+                return Forbidden("Only Admin/Owner can revoke invitations.");
+
+            var invitation = (await invites.ListByOrgAsync(orgId, ct))
+                .FirstOrDefault(i => i.Id == invitationId);
+
+            if (invitation is null)
+                return Results.NotFound(new { message = "Invitation not found." });
+
+            if (invitation.IsAccepted)
+                return Results.Conflict(new { message = "Accepted invitation cannot be revoked." });
+
+            if (invitation.IsRevoked)
+                return Results.Conflict(new { message = "Invitation has already been revoked." });
+
+            // Only Owner can revoke Owner invitations.
+            if (invitation.Role == OrgRole.Owner && actorRole != OrgRole.Owner)
+                return Forbidden("Only an Owner can revoke an Owner invitation.");
+
+            var deletedAtUtc = DateTimeOffset.UtcNow;
+
+            await publish.Publish(new OrgInvitationDeleted(
+                InvitationId: invitation.Id,
+                OrganizationId: invitation.OrganizationId,
+                Email: invitation.Email,
+                Role: invitation.Role.ToString(),
+                DeletedByUserId: actorUserId,
+                DeletedAtUtc: deletedAtUtc
+            ), ct);
+
+            await invites.MarkRevokedAsync(invitation.Id, actorUserId, deletedAtUtc, ct);
+            await uow.SaveChangesAsync(ct);
+
+            return Results.Ok(new
+            {
+                message = "Invitation revoked.",
+                invitation.Id,
+                invitation.OrganizationId,
+                invitation.Email,
+                Role = invitation.Role.ToString(),
+                RevokedByUserId = actorUserId,
+                RevokedAtUtc = deletedAtUtc
+            });
         });
 
         // Accept invite (JWT authenticated user)
@@ -208,9 +282,9 @@ public static class OrgInvitationEndpoints
 
     public sealed record CreateInvitationRequest(string Email, string? Role);
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // Helpers
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     private static bool TryGetActorUserId(HttpContext ctx, out Guid userId)
     {
         userId = Guid.Empty;
@@ -244,3 +318,7 @@ public static class OrgInvitationEndpoints
     private static IResult UnauthorizedMissingBearer()
         => Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized", detail: "Missing or invalid Bearer token.");
 }
+
+
+
+

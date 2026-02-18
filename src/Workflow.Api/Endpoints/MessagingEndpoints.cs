@@ -34,8 +34,29 @@ public static class MessagingEndpoints
             return Results.Accepted(value: new { status = "queued_via_outbox" });
         });
 
+        group.MapPost("/ping-rpc", async (
+            [FromBody] PingRpcHttpRequest req,
+            IRequestClient<PingRpcRequest> client,
+            CancellationToken ct) =>
+        {
+            if (string.IsNullOrWhiteSpace(req.Message))
+                return Results.BadRequest(new { message = "Message is required." });
+
+            var response = await client.GetResponse<PingRpcResponse>(
+                new PingRpcRequest(req.Message.Trim(), DateTimeOffset.UtcNow),
+                ct);
+
+            return Results.Ok(new
+            {
+                status = "replied",
+                response = response.Message.Message,
+                processedAtUtc = response.Message.ProcessedAtUtc
+            });
+        });
+
         return app;
     }
 
     public sealed record PingRequest(string Message);
+    public sealed record PingRpcHttpRequest(string Message);
 }

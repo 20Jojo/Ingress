@@ -129,6 +129,8 @@ builder.Services.AddMassTransit(x =>
     x.SetKebabCaseEndpointNameFormatter();
 
     x.AddConsumer<PingConsumer>();
+    x.AddConsumer<OrgInvitationCreatedConsumer>();
+    x.AddConsumer<OrgInvitationDeletedConsumer>();
 
     x.AddEntityFrameworkOutbox<WorkflowDbContext>(o =>
     {
