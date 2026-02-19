@@ -1,5 +1,7 @@
 using FluentValidation;
+using MassTransit;
 using Workflow.Api.Common;
+using Workflow.Api.Messaging.Contracts;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Projects;
@@ -24,6 +26,7 @@ public static class TaskEndpoints
             IOrgMemberRepository membersRepo,
             ITaskRepository taskRepo,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var problem = await ValidationExtensions.ValidateAndReturnProblemIfInvalid(req, validator, ct);
@@ -39,6 +42,13 @@ public static class TaskEndpoints
             var task = new TaskItem(Guid.NewGuid(), projectId, req.Title, req.Description);
             await taskRepo.AddAsync(task, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new TaskChanged(
+                task.Id,
+                task.ProjectId,
+                project.OrganizationId,
+                "created",
+                DateTimeOffset.UtcNow
+            ), ct);
 
             return Results.Created($"/tasks/{task.Id}", TaskResponse.From(task));
         });
@@ -72,6 +82,7 @@ public static class TaskEndpoints
             IProjectRepository projectRepo,
             IOrgMemberRepository membersRepo,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var existing = await taskRepo.GetAsync(taskId, ct);
@@ -103,6 +114,13 @@ public static class TaskEndpoints
 
             await taskRepo.UpdateStatusAsync(taskId, parsed, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new TaskChanged(
+                taskId,
+                existing.ProjectId,
+                orgId.Value,
+                "statusChanged",
+                DateTimeOffset.UtcNow
+            ), ct);
 
             var updated = await taskRepo.GetAsync(taskId, ct);
             return updated is null
@@ -120,6 +138,7 @@ public static class TaskEndpoints
             IProjectRepository projectRepo,
             IOrgMemberRepository membersRepo,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var problem = await ValidationExtensions.ValidateAndReturnProblemIfInvalid(req, validator, ct);
@@ -138,6 +157,13 @@ public static class TaskEndpoints
 
             await taskRepo.UpdateDetailsAsync(taskId, req.Title, req.Description, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new TaskChanged(
+                taskId,
+                existing.ProjectId,
+                orgId.Value,
+                "detailsChanged",
+                DateTimeOffset.UtcNow
+            ), ct);
 
             var updated = await taskRepo.GetAsync(taskId, ct);
             return updated is null
@@ -154,6 +180,7 @@ public static class TaskEndpoints
             IProjectRepository projectRepo,
             IOrgMemberRepository membersRepo,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var existing = await taskRepo.GetAsync(taskId, ct);
@@ -169,6 +196,13 @@ public static class TaskEndpoints
 
             await taskRepo.UpdateDueDateAsync(taskId, req.DueAt, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new TaskChanged(
+                taskId,
+                existing.ProjectId,
+                orgId.Value,
+                "dueChanged",
+                DateTimeOffset.UtcNow
+            ), ct);
 
             var updated = await taskRepo.GetAsync(taskId, ct);
             return updated is null
@@ -185,6 +219,7 @@ public static class TaskEndpoints
             IProjectRepository projectRepo,
             IOrgMemberRepository membersRepo,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var task = await taskRepo.GetAsync(taskId, ct);
@@ -203,6 +238,13 @@ public static class TaskEndpoints
             {
                 await taskRepo.UpdateAssigneeAsync(taskId, null, ct);
                 await uow.SaveChangesAsync(ct);
+                await publish.Publish(new TaskChanged(
+                    taskId,
+                    task.ProjectId,
+                    orgId.Value,
+                    "unassigned",
+                    DateTimeOffset.UtcNow
+                ), ct);
 
                 var updated = await taskRepo.GetAsync(taskId, ct);
                 return updated is null
@@ -217,6 +259,13 @@ public static class TaskEndpoints
 
             await taskRepo.UpdateAssigneeAsync(taskId, req.UserId.Value, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new TaskChanged(
+                taskId,
+                task.ProjectId,
+                orgId.Value,
+                "assigned",
+                DateTimeOffset.UtcNow
+            ), ct);
 
             var result = await taskRepo.GetAsync(taskId, ct);
             return result is null

@@ -12,6 +12,8 @@ using Workflow.Api.Jobs;
 using Workflow.Api.Auth;
 using Workflow.Api.Endpoints;
 using Workflow.Api.Middleware;
+using Workflow.Api.Hubs;
+using Workflow.Api.Realtime;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Projects;
@@ -35,6 +37,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ---- Core services
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<OrgRealtimeBroadcaster>();
 
 // ---- OpenTelemetry
 var otelSection = builder.Configuration.GetSection("OpenTelemetry");
@@ -85,6 +89,22 @@ builder.Services.AddOpenTelemetry()
 // ---- ProblemDetails
 builder.Services.AddProblemDetails();
 
+// ---- CORS (frontend dev)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("FrontendDev", policy =>
+    {
+        policy
+            .WithOrigins(
+                "http://localhost:3000",
+                "https://localhost:3000",
+                "http://127.0.0.1:3000",
+                "https://127.0.0.1:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // ---- JSON options
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
@@ -131,6 +151,7 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<PingConsumer>();
     x.AddConsumer<OrgInvitationCreatedConsumer>();
     x.AddConsumer<OrgInvitationDeletedConsumer>();
+    x.AddConsumer<RealtimeBroadcastConsumer>();
 
     x.AddEntityFrameworkOutbox<WorkflowDbContext>(o =>
     {
@@ -196,6 +217,22 @@ builder.Services
 
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrWhiteSpace(accessToken) &&
+                    path.StartsWithSegments("/hubs/org-events"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -334,6 +371,7 @@ app.UseSwaggerUI(c =>
     c.InjectJavascript("/swagger-ui/userid.js");
 });
 
+app.UseCors("FrontendDev");
 app.UseRateLimiter();
 if (app.Environment.IsDevelopment())
 {
@@ -370,6 +408,7 @@ app.MapUserEndpoints();
 app.MapOrgMemberEndpoints();
 app.MapOrgInvitationEndpoints();
 app.MapMessagingEndpoints();
+app.MapHub<OrgEventsHub>("/hubs/org-events").RequireAuthorization();
 app.MapPost("/jobs/ping", (IBackgroundJobClient bg) =>
 {
     bg.Enqueue<SampleJobs>(j => j.PingAsync());

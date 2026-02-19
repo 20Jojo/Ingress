@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using MassTransit;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Projects;
+using Workflow.Api.Messaging.Contracts;
 using Workflow.Domain.Projects;
 
 namespace Workflow.Api.Endpoints;
@@ -32,6 +34,7 @@ public static class ProjectEndpoints
             IOrganizationRepository orgs,
             IProjectRepository projects,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var org = await orgs.GetAsync(orgId, ct);
@@ -41,6 +44,12 @@ public static class ProjectEndpoints
             var project = new Project(Guid.NewGuid(), orgId, req.Name);
             await projects.AddAsync(project, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new ProjectCreated(
+                project.Id,
+                project.OrganizationId,
+                project.Name,
+                DateTimeOffset.UtcNow
+            ), ct);
 
             return Results.Created($"/orgs/{orgId}/projects/{project.Id}", new
             {

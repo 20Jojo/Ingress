@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Workflow.Application.Organizations;
 using Workflow.Domain.Organizations;
 
@@ -8,15 +9,12 @@ public static class OrgAuth
     public static bool TryGetCallerId(HttpContext ctx, out Guid userId)
     {
         userId = default;
-
-        if (!ctx.Request.Headers.TryGetValue("X-User-Id", out var raw))
-            return false;
-
-        return Guid.TryParse(raw.ToString(), out userId) && userId != Guid.Empty;
+        var raw = ctx.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(raw, out userId) && userId != Guid.Empty;
     }
 
     public static IResult UnauthorizedMissingCaller()
-        => Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized", detail: "Missing or invalid X-User-Id header.");
+        => Results.Problem(statusCode: StatusCodes.Status401Unauthorized, title: "Unauthorized", detail: "Missing or invalid Bearer token.");
 
     public static IResult Forbidden(string detail)
         => Results.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Forbidden", detail: detail);
