@@ -1,0 +1,57 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --surface: #ffffff;
+  --surface-muted: #f8f8f8;
+  --border: #dddddd;
+  --border-soft: #f2f2f2;
+  --text-muted: #666666;
+  --brand: #111111;
+  --brand-contrast: #ffffff;
+  --danger: #c41212;
+  --danger-border: #d11f1f;
+  --ok-border: #cfe8cf;
+  --error-border: #f3c9c9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --surface: #111111;
+    --surface-muted: #151515;
+    --border: #2d2d2d;
+    --border-soft: #242424;
+    --text-muted: #b0b0b0;
+    --brand: #f1f1f1;
+    --brand-contrast: #111111;
+    --danger: #ff7b7b;
+    --danger-border: #ff5252;
+    --ok-border: #2e5c38;
+    --error-border: #6b2f2f;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+}
+
+@keyframes wf-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

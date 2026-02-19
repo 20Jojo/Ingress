@@ -215,6 +215,7 @@ public static class OrgInvitationEndpoints
             IOrgMemberRepository members,
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             // Requires Bearer token (FallbackPolicy already requires auth)
@@ -243,6 +244,13 @@ public static class OrgInvitationEndpoints
             {
                 await invites.MarkAcceptedAsync(invite.Id, actorUserId, DateTimeOffset.UtcNow, ct);
                 await uow.SaveChangesAsync(ct);
+                await publish.Publish(new OrgInvitationAccepted(
+                    invite.Id,
+                    invite.OrganizationId,
+                    actorUserId,
+                    existingRole!.Value.ToString(),
+                    DateTimeOffset.UtcNow
+                ), ct);
 
                 return Results.Ok(new
                 {
@@ -268,6 +276,20 @@ public static class OrgInvitationEndpoints
 
             await invites.MarkAcceptedAsync(invite.Id, actorUserId, DateTimeOffset.UtcNow, ct);
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new OrgInvitationAccepted(
+                invite.Id,
+                invite.OrganizationId,
+                actorUserId,
+                invite.Role.ToString(),
+                DateTimeOffset.UtcNow
+            ), ct);
+            await publish.Publish(new OrgMemberAdded(
+                invite.OrganizationId,
+                actorUserId,
+                invite.Role.ToString(),
+                actorUserId,
+                DateTimeOffset.UtcNow
+            ), ct);
 
             return Results.Ok(new
             {

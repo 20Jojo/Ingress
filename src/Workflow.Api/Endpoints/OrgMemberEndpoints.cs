@@ -1,7 +1,9 @@
-﻿using System.Text.Json;
+using System.Text.Json;
+using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
 using Workflow.Api.Common;
+using Workflow.Api.Messaging.Contracts;
 using Workflow.Application.Common;
 using Workflow.Application.Organizations;
 using Workflow.Application.Users;
@@ -16,9 +18,7 @@ public static class OrgMemberEndpoints
         var group = app.MapGroup("/orgs/{orgId:guid}/members")
             .WithTags("Org Members");
 
-        // ─────────────────────────────────────────────
         // Admin+ : list members (cached)
-        // ─────────────────────────────────────────────
         group.MapGet("", async (
             Guid orgId,
             IOrgMemberRepository members,
@@ -57,10 +57,7 @@ public static class OrgMemberEndpoints
         })
         .RequireAuthorization("OrgAdmin");
 
-        // ─────────────────────────────────────────────
-        // Admin+ : add member
-        // Only Owner may add another Owner
-        // ─────────────────────────────────────────────
+        // Admin+ : add member (only Owner may add Owner)
         group.MapPost("", async (
             HttpContext ctx,
             Guid orgId,
@@ -70,6 +67,7 @@ public static class OrgMemberEndpoints
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
             IDistributedCache cache,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -105,8 +103,14 @@ public static class OrgMemberEndpoints
                 ct);
 
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new OrgMemberAdded(
+                orgId,
+                req.UserId,
+                requestedRole.ToString(),
+                actorUserId,
+                DateTimeOffset.UtcNow
+            ), ct);
 
-            // invalidate cache
             await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
 
             return Results.Created($"/orgs/{orgId}/members", new
@@ -119,9 +123,7 @@ public static class OrgMemberEndpoints
         })
         .RequireAuthorization("OrgAdmin");
 
-        // ─────────────────────────────────────────────
-        // Admin+ : change role (polite errors)
-        // ─────────────────────────────────────────────
+        // Admin+ : change role
         group.MapPatch("/{userId:guid}/role", async (
             HttpContext ctx,
             Guid orgId,
@@ -131,6 +133,7 @@ public static class OrgMemberEndpoints
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
             IDistributedCache cache,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -161,7 +164,7 @@ public static class OrgMemberEndpoints
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                    return Conflict("You can’t demote the last Owner. Promote another Owner first, then retry.");
+                    return Conflict("You can�t demote the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.UpdateRoleAsync(orgId, userId, newRole, ct);
@@ -177,17 +180,22 @@ public static class OrgMemberEndpoints
                 ct);
 
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new OrgMemberRoleChanged(
+                orgId,
+                userId,
+                currentRole.Value.ToString(),
+                newRole.ToString(),
+                actorUserId,
+                DateTimeOffset.UtcNow
+            ), ct);
 
-            // invalidate cache
             await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
 
             return Results.Ok(new { organizationId = orgId, userId, role = newRole.ToString() });
         })
         .RequireAuthorization("OrgAdmin");
 
-        // ─────────────────────────────────────────────
         // Admin+ : remove member (soft delete)
-        // ─────────────────────────────────────────────
         group.MapDelete("/{userId:guid}", async (
             HttpContext ctx,
             Guid orgId,
@@ -196,6 +204,7 @@ public static class OrgMemberEndpoints
             IOrgMemberAuditRepository audit,
             IUnitOfWork uow,
             IDistributedCache cache,
+            IPublishEndpoint publish,
             CancellationToken ct) =>
         {
             var actorUserId = GetActorUserId(ctx);
@@ -215,7 +224,7 @@ public static class OrgMemberEndpoints
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                    return Conflict("You can’t remove the last Owner. Promote another Owner first, then retry.");
+                    return Conflict("You can�t remove the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.RemoveAsync(orgId, userId, actorUserId, ct);
@@ -231,8 +240,14 @@ public static class OrgMemberEndpoints
                 ct);
 
             await uow.SaveChangesAsync(ct);
+            await publish.Publish(new OrgMemberRemoved(
+                orgId,
+                userId,
+                targetRole.Value.ToString(),
+                actorUserId,
+                DateTimeOffset.UtcNow
+            ), ct);
 
-            // invalidate cache
             await cache.RemoveAsync(CacheKeys.OrgMembers(orgId), ct);
 
             return Results.NoContent();
