@@ -46,7 +46,11 @@ export default function OrgInvitePage() {
       try {
         setInvites(await listInvites(orgId));
       } catch (e: unknown) {
-        setError(getErrorMessage(e, "Failed to load invitations"));
+        if (isForbiddenError(e)) {
+          setError("You don't have permission to view invitations in this organization.");
+        } else {
+          setError(getErrorMessage(e, "Failed to load invitations"));
+        }
       }
     },
     [orgId],
@@ -70,7 +74,11 @@ export default function OrgInvitePage() {
       setEmail("");
       await load(true);
     } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to create invitation"));
+      if (isForbiddenError(e)) {
+        setError("You don't have permission to create invitations in this organization.");
+      } else {
+        setError(getErrorMessage(e, "Failed to create invitation"));
+      }
     } finally {
       setBusy(false);
     }
@@ -84,7 +92,11 @@ export default function OrgInvitePage() {
       await revokeInvite(orgId, invite.id);
       await load(true);
     } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to revoke invitation"));
+      if (isForbiddenError(e)) {
+        setError("You don't have permission to revoke invitations in this organization.");
+      } else {
+        setError(getErrorMessage(e, "Failed to revoke invitation"));
+      }
     } finally {
       setBusyInviteKey(null);
     }
@@ -224,6 +236,11 @@ const subtle: React.CSSProperties = {
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+}
+
+function isForbiddenError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes("403");
 }
 
 function getStatusStyle(invite: InviteDto): React.CSSProperties {

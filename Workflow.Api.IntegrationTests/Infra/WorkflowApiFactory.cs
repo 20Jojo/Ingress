@@ -17,6 +17,14 @@ public sealed class WorkflowApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
 
+        var apiContentRoot = Path.GetFullPath(
+            Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "src", "Workflow.Api"));
+        var apiWebRoot = Path.Combine(apiContentRoot, "wwwroot");
+        Directory.CreateDirectory(apiWebRoot);
+
+        builder.UseSetting(WebHostDefaults.ContentRootKey, apiContentRoot);
+        builder.UseSetting(WebHostDefaults.WebRootKey, apiWebRoot);
+
         builder.ConfigureAppConfiguration((_, config) =>
         {
             var overrides = new Dictionary<string, string?>
