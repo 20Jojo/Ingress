@@ -28,6 +28,7 @@ export default function OrgDetailPage() {
   const [org, setOrg] = useState<OrgDto | null>(null);
   const [members, setMembers] = useState<OrgMemberDto[] | null>(null);
   const [error, setError] = useState("");
+  const [membersAccessMessage, setMembersAccessMessage] = useState("");
 
   const load = useCallback(
     async (reset: boolean) => {
@@ -36,11 +37,24 @@ export default function OrgDetailPage() {
         setError("");
         setOrg(null);
         setMembers(null);
+        setMembersAccessMessage("");
       }
       try {
-        const [o, m] = await Promise.all([getOrg(orgId), listOrgMembers(orgId)]);
+        const o = await getOrg(orgId);
         setOrg(o);
-        setMembers(m);
+
+        try {
+          const m = await listOrgMembers(orgId);
+          setMembers(m);
+          setMembersAccessMessage("");
+        } catch (e: unknown) {
+          if (isForbiddenError(e)) {
+            setMembers([]);
+            setMembersAccessMessage("You don't have permission to view member details in this organization.");
+            return;
+          }
+          throw e;
+        }
       } catch (e: unknown) {
         setError(getErrorMessage(e, "Failed to load org"));
       }
@@ -50,7 +64,6 @@ export default function OrgDetailPage() {
 
   useEffect(() => {
     if (!orgId) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load(false);
   }, [orgId, load]);
 
@@ -79,6 +92,7 @@ export default function OrgDetailPage() {
       </Row>
 
       {error && <ErrorBox>{error}</ErrorBox>}
+      {membersAccessMessage && <EmptyState>{membersAccessMessage}</EmptyState>}
 
       {members && members.length > 0 && (
         <DataList>
@@ -110,6 +124,11 @@ export default function OrgDetailPage() {
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+}
+
+function isForbiddenError(error: unknown): boolean {
+  if (!(error instanceof Error) || !error.message) return false;
+  return error.message.includes("403");
 }
 
 function memberKey(member: OrgMemberDto, index: number): string {

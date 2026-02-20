@@ -40,9 +40,16 @@ export default function OrgMembersPage() {
     try {
       setMembers(await listMembers(orgId));
     } catch (e: unknown) {
-      const message = getErrorMessage(e, "Failed to load members");
-      setError(message);
-      push(message, "error");
+      const forbidden = isForbiddenError(e);
+      const message = forbidden
+        ? "You don't have permission to view members in this organization."
+        : getErrorMessage(e, "Failed to load members");
+      if (forbidden) {
+        setError("");
+        push(message, "info");
+      } else {
+        setError(message);
+      }
     }
   }, [orgId, push]);
 
@@ -104,7 +111,7 @@ export default function OrgMembersPage() {
       </Row>
 
       {error && <ErrorBox>{error}</ErrorBox>}
-      {members === null && <LoadingCard label="Loading members..." />}
+      {members === null && !error && <LoadingCard label="Loading members..." />}
 
       {members && members.length === 0 && <EmptyState>No members found.</EmptyState>}
 
@@ -186,4 +193,9 @@ const subtle: React.CSSProperties = {
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
+}
+
+function isForbiddenError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes("403");
 }

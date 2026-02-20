@@ -30,7 +30,14 @@ export type DashboardEvent = {
 };
 
 export async function getOrgDashboardData(orgId: string): Promise<DashboardData> {
-  const [members, projects] = await Promise.all([listMembers(orgId), listProjects(orgId)]);
+  const projects = await listProjects(orgId);
+
+  let members: MemberDto[] = [];
+  try {
+    members = await listMembers(orgId);
+  } catch {
+    members = [];
+  }
 
   const tasksByProject = await Promise.all(projects.map((p) => listTasks(p.id)));
   const tasks = tasksByProject.flat();
@@ -101,4 +108,3 @@ export async function getOrgDashboardData(orgId: string): Promise<DashboardData>
     recentEvents,
   };
 }
-
