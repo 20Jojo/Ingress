@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { acceptInvite } from "@/lib/invitesApi";
 import {
@@ -16,10 +16,18 @@ import {
 } from "@/components/ui";
 
 export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<AcceptInviteFallback />}>
+      <AcceptInviteContent />
+    </Suspense>
+  );
+}
+
+function AcceptInviteContent() {
   const searchParams = useSearchParams();
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<unknown>(null);
+  const [resultText, setResultText] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -31,7 +39,7 @@ export default function AcceptInvitePage() {
 
   async function onAccept() {
     setError("");
-    setResult(null);
+    setResultText("");
     const trimmed = token.trim();
     if (!trimmed) {
       setError("Token is required.");
@@ -45,7 +53,8 @@ export default function AcceptInvitePage() {
 
     setBusy(true);
     try {
-      setResult(await acceptInvite(trimmed));
+      const res = await acceptInvite(trimmed);
+      setResultText(JSON.stringify(res, null, 2));
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to accept invitation"));
     } finally {
@@ -76,12 +85,25 @@ export default function AcceptInvitePage() {
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
-      {result && (
+      {resultText && (
         <SuccessBox>
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Accepted</div>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{JSON.stringify(result, null, 2)}</pre>
+          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{resultText}</pre>
         </SuccessBox>
       )}
+    </PageShell>
+  );
+}
+
+function AcceptInviteFallback() {
+  return (
+    <PageShell>
+      <PageTitle title="Accept Invitation" />
+      <Row>
+        <Link href="/auth">Login</Link>
+        <Link href="/orgs">Orgs</Link>
+      </Row>
+      <div>Loading invite form...</div>
     </PageShell>
   );
 }

@@ -1,4 +1,4 @@
-# Current Architecture (Stages 0-10)
+# Current Architecture (Stages 0-12)
 
 ## Scope
 Monorepo architecture with:
@@ -75,6 +75,49 @@ Monorepo architecture with:
 - SignalR hub (`/hubs/org-events`) with org group join
 - MassTransit consumer broadcasts bus events to SignalR groups
 - Frontend org-scoped subscriptions auto-refresh key pages
+
+### Stage 11: UI System + UX Consistency
+- Shared UI primitives (`frontend/src/components/ui.tsx`)
+- Route-level migration to consistent cards, lists, buttons, and page shells
+- Global top navigation in layout
+- Hydration/key stability fixes in org/member/task views
+
+### Stage 11.5: Polish + Usability
+- Theme/design tokens in `frontend/src/app/globals.css`
+- Shared spinner/loading card primitives
+- Global toast provider for action feedback
+- Mobile wrapping refinements on dense pages
+- Frontend smoke checklist (`frontend/docs/stage11.5-smoke-checklist.md`)
+
+### Stage 12: Realtime Hardening
+- Realtime event relevance filtering per page (`eventTypes`)
+- Debounced realtime-triggered reloads to reduce event storms
+- Connection status surface in top navigation:
+  - `connected`
+  - `reconnecting`
+  - `connecting`
+  - `offline`
+  - `idle`
+- Graceful fallback retained when SignalR is unavailable
+
+### Stage 12 (Operational Baseline Add-on)
+- Frontend quality gates:
+  - lint
+  - typecheck
+  - build (`verify:full`)
+- Combined verification scripts:
+  - `npm run verify`
+  - `npm run verify:full`
+- Frontend runbook/README updated from boilerplate to project-specific usage
+
+### Stage 13: API Shape + Endpoint Cleanup
+- Enforced explicit camelCase HTTP JSON options in API configuration
+- Added missing detail endpoints:
+  - `GET /orgs/{orgId}/projects/{projectId}`
+  - `GET /tasks/{taskId}`
+- Standardized org member endpoint payloads and cached JSON to camelCase
+- Removed frontend casing-normalization shims in API clients
+- Updated detail pages to call direct detail endpoints instead of list+find
 
 ---
 
@@ -170,4 +213,3 @@ Monorepo architecture with:
   - valid bearer token
   - org membership for hub group join
 - If realtime negotiation fails, pages continue functioning with standard fetch/reload.
-

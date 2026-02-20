@@ -23,6 +23,7 @@ import {
 } from "@/components/ui";
 
 const STATUSES = ["Todo", "InProgress", "Done"] as const;
+const TASK_EVENTS = ["task.*", "member.*"];
 
 export default function ProjectTasksPage() {
   const params = useParams<{ orgId: string; projectId: string }>();
@@ -127,7 +128,7 @@ export default function ProjectTasksPage() {
   const handleRealtime = useCallback(() => {
     void load(false);
   }, [load]);
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: TASK_EVENTS, debounceMs: 300 });
 
   return (
     <PageShell wide>

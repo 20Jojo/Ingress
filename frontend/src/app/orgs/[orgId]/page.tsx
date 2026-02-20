@@ -16,6 +16,8 @@ import {
   Row,
 } from "@/components/ui";
 
+const ORG_DETAIL_EVENTS = ["member.*", "invite.accepted"];
+
 export default function OrgDetailPage() {
   const params = useParams<{ orgId: string }>();
   const orgId = useMemo(
@@ -56,7 +58,7 @@ export default function OrgDetailPage() {
     void load(false);
   }, [load]);
 
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: ORG_DETAIL_EVENTS, debounceMs: 350 });
 
   return (
     <PageShell>

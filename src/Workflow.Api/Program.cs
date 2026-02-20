@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using FluentValidation;
 using Hangfire;
@@ -108,6 +109,8 @@ builder.Services.AddCors(options =>
 // ---- JSON options
 builder.Services.ConfigureHttpJsonOptions(o =>
 {
+    o.SerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    o.SerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
     o.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 

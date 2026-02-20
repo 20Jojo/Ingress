@@ -1,24 +1,79 @@
 "use client";
 
-import { useEffect } from "react";
-import { subscribeOrgEvents, type OrgRealtimeEvent } from "@/lib/realtime";
+import { useEffect, useRef, useSyncExternalStore } from "react";
+import {
+  getRealtimeConnectionStatus,
+  subscribeOrgEvents,
+  subscribeRealtimeConnectionStatus,
+  type OrgRealtimeEvent,
+  type RealtimeConnectionStatus,
+} from "@/lib/realtime";
 
-export function useOrgRealtime(orgId: string | undefined, onEvent: (event: OrgRealtimeEvent) => void) {
+type UseOrgRealtimeOptions = {
+  eventTypes?: string[];
+  debounceMs?: number;
+};
+
+export function useOrgRealtime(
+  orgId: string | undefined,
+  onEvent: (event: OrgRealtimeEvent) => void,
+  options?: UseOrgRealtimeOptions,
+) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastEventRef = useRef<OrgRealtimeEvent | null>(null);
+  const debounceMs = options?.debounceMs ?? 350;
+
   useEffect(() => {
     if (!orgId) return;
 
     let unsubscribe: (() => Promise<void>) | null = null;
+    let cancelled = false;
+
     void (async () => {
       try {
-        unsubscribe = await subscribeOrgEvents(orgId, onEvent);
+        unsubscribe = await subscribeOrgEvents(
+          orgId,
+          (event) => {
+            if (debounceMs <= 0) {
+              onEvent(event);
+              return;
+            }
+
+            lastEventRef.current = event;
+            if (timerRef.current) {
+              clearTimeout(timerRef.current);
+            }
+            timerRef.current = setTimeout(() => {
+              const pending = lastEventRef.current;
+              lastEventRef.current = null;
+              if (pending) onEvent(pending);
+            }, debounceMs);
+          },
+          { eventTypes: options?.eventTypes },
+        );
       } catch (error) {
         console.warn("Realtime subscription failed; using non-realtime fallback.", error);
       }
     })();
 
     return () => {
+      cancelled = true;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
       if (!unsubscribe) return;
-      void unsubscribe();
+      if (cancelled) {
+        void unsubscribe();
+      }
     };
-  }, [orgId, onEvent]);
+  }, [orgId, onEvent, debounceMs, options?.eventTypes]);
+}
+
+export function useRealtimeConnectionStatus(): RealtimeConnectionStatus {
+  return useSyncExternalStore(
+    subscribeRealtimeConnectionStatus,
+    getRealtimeConnectionStatus,
+    getRealtimeConnectionStatus,
+  );
 }

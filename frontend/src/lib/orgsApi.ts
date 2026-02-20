@@ -19,17 +19,6 @@ export type OrgMemberDto = {
   joinedAt: string;
 };
 
-type OrgMemberWireDto = {
-  OrganizationId?: string;
-  UserId?: string;
-  Role?: string;
-  JoinedAt?: string;
-  organizationId?: string;
-  userId?: string;
-  role?: string;
-  joinedAt?: string;
-};
-
 export function createOrg(name: string) {
   return authJson<CreateOrgResponse>("/orgs", {
     method: "POST",
@@ -45,15 +34,8 @@ export function getOrg(orgId: string) {
   return authJson<OrgDto>(`/orgs/${orgId}`, { method: "GET" });
 }
 
-export async function listOrgMembers(orgId: string) {
-  const list = await authJson<OrgMemberWireDto[]>(`/orgs/${orgId}/members`, {
+export function listOrgMembers(orgId: string) {
+  return authJson<OrgMemberDto[]>(`/orgs/${orgId}/members`, {
     method: "GET",
   });
-
-  return list.map((m) => ({
-    organizationId: m.organizationId ?? m.OrganizationId ?? "",
-    userId: m.userId ?? m.UserId ?? "",
-    role: m.role ?? m.Role ?? "",
-    joinedAt: m.joinedAt ?? m.JoinedAt ?? "",
-  }));
 }
