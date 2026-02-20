@@ -121,11 +121,13 @@ export default function OrgMembersPage() {
             const role = m.role || "Member";
 
             return (
-              <DataRow key={key}>
+              <DataRow key={key} data-testid={`member-row-${idx}`}>
                 <div style={memberRow}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{userId}</div>
-                    <div>Role: {role}</div>
+                    <div data-testid={`member-user-${idx}`} style={{ fontWeight: 700 }}>
+                      {userId}
+                    </div>
+                    <div data-testid={`member-role-${idx}`}>Role: {role}</div>
                     <div style={subtle}>
                       Joined: {m.joinedAt ? new Date(m.joinedAt).toLocaleString() : "-"}
                     </div>
@@ -135,6 +137,7 @@ export default function OrgMembersPage() {
                     {ROLES.map((nextRole) => (
                       <Button
                         key={`${key}:${nextRole}`}
+                        data-testid={`member-set-role-${idx}-${nextRole}`}
                         variant="secondary"
                         disabled={busy || !m.userId || role === nextRole}
                         onClick={() => void onChangeRole(m, nextRole, key)}

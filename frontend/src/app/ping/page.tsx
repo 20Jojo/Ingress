@@ -53,16 +53,16 @@ export default function PingPage() {
       <PageTitle title="API Ping" subtitle={<code>NEXT_PUBLIC_API_BASE_URL/health/live</code>} />
 
       <Row>
-        <Button onClick={handlePing} disabled={state.kind === "loading"}>
+        <Button data-testid="ping-submit" onClick={handlePing} disabled={state.kind === "loading"}>
           {state.kind === "loading" ? "Pinging..." : "Ping API"}
         </Button>
         <Link href="/">Back to home</Link>
       </Row>
 
-      {state.kind === "idle" && <Card>No request sent yet.</Card>}
+      {state.kind === "idle" && <Card data-testid="ping-idle">No request sent yet.</Card>}
 
       {state.kind === "success" && (
-        <SuccessBox>
+        <SuccessBox data-testid="ping-success">
           <div style={{ fontWeight: 700 }}>Success ({state.result.status}) - API reachable.</div>
           <div style={{ marginTop: 8, wordBreak: "break-all" }}>URL: {state.result.url}</div>
           <div style={{ marginTop: 4, wordBreak: "break-all" }}>
@@ -71,7 +71,7 @@ export default function PingPage() {
         </SuccessBox>
       )}
 
-      {state.kind === "error" && <ErrorBox>{state.message}</ErrorBox>}
+      {state.kind === "error" && <ErrorBox data-testid="ping-error">{state.message}</ErrorBox>}
     </PageShell>
   );
 }

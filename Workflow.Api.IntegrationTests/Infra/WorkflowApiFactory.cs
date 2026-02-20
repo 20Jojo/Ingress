@@ -23,11 +23,13 @@ public sealed class WorkflowApiFactory : WebApplicationFactory<Program>
             {
                 ["ConnectionStrings:WorkflowDb"] = _fx.PgConnectionString,
                 ["ConnectionStrings:Redis"] = _fx.RedisConnectionString,
+                ["ConnectionStrings:RabbitMq"] = _fx.RabbitMqConnectionString,
                 ["Jwt:Issuer"] = "Workflow.Api",
                 ["Jwt:Audience"] = "Workflow.Client",
                 ["Jwt:SigningKey"] = "CHANGE_ME_TO_A_LONG_RANDOM_DEV_SECRET_50+_CHARS",
                 ["Jwt:AccessTokenMinutes"] = "60",
-                ["Jwt:RefreshTokenDays"] = "14"
+                ["Jwt:RefreshTokenDays"] = "14",
+                ["OpenTelemetry:OtlpEndpoint"] = "http://localhost:4317"
             };
 
             config.AddInMemoryCollection(overrides);

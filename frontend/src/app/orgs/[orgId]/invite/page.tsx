@@ -118,17 +118,18 @@ export default function OrgInvitePage() {
 
       <Row>
         <Input
+          data-testid="invite-email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Invitee email"
           style={{ flex: 1, minWidth: 240 }}
         />
-        <Select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: 130 }}>
+        <Select data-testid="invite-role" value={role} onChange={(e) => setRole(e.target.value)} style={{ width: 130 }}>
           <option>Member</option>
           <option>Admin</option>
           <option>Owner</option>
         </Select>
-        <Button onClick={onInvite} disabled={busy}>
+        <Button data-testid="invite-submit" onClick={onInvite} disabled={busy}>
           {busy ? "Inviting..." : "Invite"}
         </Button>
         <Button onClick={() => void load(true)} variant="secondary">
@@ -137,9 +138,11 @@ export default function OrgInvitePage() {
       </Row>
 
       {createdToken && (
-        <SuccessBox>
+        <SuccessBox data-testid="invite-created">
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Invitation token created</div>
-          <code style={{ wordBreak: "break-all" }}>{createdToken}</code>
+          <code data-testid="invite-created-token" style={{ wordBreak: "break-all" }}>
+            {createdToken}
+          </code>
           <Row>
             <Button variant="secondary" onClick={() => void copy(createdToken)}>
               Copy token
@@ -163,7 +166,7 @@ export default function OrgInvitePage() {
             const key = inviteKey(i, idx);
             const revokable = !i.revokedAtUtc && !i.acceptedAtUtc && !!i.id;
             return (
-              <DataRow key={key}>
+              <DataRow key={key} data-testid={`invite-row-${i.id || idx}`}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                   <div>
                     <div>

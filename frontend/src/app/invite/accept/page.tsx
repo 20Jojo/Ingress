@@ -73,20 +73,21 @@ function AcceptInviteContent() {
 
       <Row>
         <Input
+          data-testid="accept-token"
           value={token}
           onChange={(e) => setToken(e.target.value)}
           placeholder="Paste invitation token"
           style={{ flex: 1 }}
         />
-        <Button onClick={onAccept} disabled={busy}>
+        <Button data-testid="accept-submit" onClick={onAccept} disabled={busy}>
           {busy ? "Accepting..." : "Accept"}
         </Button>
       </Row>
 
-      {error && <ErrorBox>{error}</ErrorBox>}
+      {error && <ErrorBox data-testid="accept-error">{error}</ErrorBox>}
 
       {resultText && (
-        <SuccessBox>
+        <SuccessBox data-testid="accept-success">
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Accepted</div>
           <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{resultText}</pre>
         </SuccessBox>

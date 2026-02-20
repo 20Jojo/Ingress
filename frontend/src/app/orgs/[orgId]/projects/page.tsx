@@ -88,12 +88,13 @@ export default function OrgProjectsPage() {
 
       <Row>
         <Input
+          data-testid="project-create-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="New project name"
           style={{ flex: 1, minWidth: 220 }}
         />
-        <Button disabled={busy} onClick={onCreate}>
+        <Button data-testid="project-create-submit" disabled={busy} onClick={onCreate}>
           {busy ? "Creating..." : "Create"}
         </Button>
         <Button onClick={() => void load(true)} variant="secondary">
@@ -111,16 +112,20 @@ export default function OrgProjectsPage() {
             <strong>{projects.length} project(s)</strong>
           </DataRow>
           {projects.map((p, idx) => (
-            <DataRow key={projectKey(p, idx)}>
+            <DataRow key={projectKey(p, idx)} data-testid={`project-row-${p.id || idx}`}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div>
                   <strong>{p.name || "Untitled project"}</strong>
                   <div style={{ opacity: 0.7, fontSize: 12 }}>{p.id || "-"}</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <Link href={`/orgs/${orgId}/projects/${p.id}`}>Open</Link>
+                  <Link data-testid={`project-open-${p.id || idx}`} href={`/orgs/${orgId}/projects/${p.id}`}>
+                    Open
+                  </Link>
                   <div style={{ marginTop: 6 }}>
-                    <Link href={`/orgs/${orgId}/projects/${p.id}/tasks`}>Tasks</Link>
+                    <Link data-testid={`project-tasks-${p.id || idx}`} href={`/orgs/${orgId}/projects/${p.id}/tasks`}>
+                      Tasks
+                    </Link>
                   </div>
                 </div>
               </div>

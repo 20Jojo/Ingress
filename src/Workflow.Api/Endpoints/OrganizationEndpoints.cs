@@ -53,10 +53,17 @@ public static class OrganizationEndpoints
 
         // GET /orgs
         group.MapGet("", async (
+            HttpContext http,
             IOrganizationRepository orgs,
             CancellationToken ct) =>
         {
-            var list = await orgs.ListAsync(ct);
+            var rawUserId = http.User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(rawUserId, out var userId))
+            {
+                return Results.Unauthorized();
+            }
+
+            var list = await orgs.ListByUserAsync(userId, ct);
             return Results.Ok(list.Select(o => new { o.Id, o.Name }));
         });
 

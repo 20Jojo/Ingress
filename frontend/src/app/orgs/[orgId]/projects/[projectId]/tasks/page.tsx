@@ -139,14 +139,20 @@ export default function ProjectTasksPage() {
       <PageTitle title="Tasks" subtitle={<span>Org: {orgId} | Project: {projectId}</span>} />
 
       <div style={{ display: "grid", gap: 10 }}>
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" />
+        <Input
+          data-testid="task-create-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Task title"
+        />
         <TextArea
+          data-testid="task-create-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Task description (optional)"
         />
         <Row>
-          <Button onClick={onCreate} disabled={busy}>
+          <Button data-testid="task-create-submit" onClick={onCreate} disabled={busy}>
             {busy ? "Creating..." : "Create Task"}
           </Button>
           <Button onClick={() => void load(true)} variant="secondary">
@@ -171,7 +177,7 @@ export default function ProjectTasksPage() {
             const busyThis = busyTaskKey === key;
             const taskId = task.id || "";
             return (
-              <DataRow key={key}>
+              <DataRow key={key} data-testid={`task-row-${task.id || idx}`}>
                 <div style={taskRow}>
                   <div style={{ flex: 1 }}>
                     <strong>{task.title || "Untitled task"}</strong>

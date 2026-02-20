@@ -77,8 +77,13 @@ export default function OrgsPage() {
 
       <Card>
         <Row>
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="New organization name" />
-          <Button onClick={onCreate} disabled={busy}>
+          <Input
+            data-testid="org-create-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New organization name"
+          />
+          <Button data-testid="org-create-submit" onClick={onCreate} disabled={busy}>
             {busy ? "Creating..." : "Create"}
           </Button>
           <Button onClick={() => void load(true)} variant="secondary">
@@ -96,13 +101,15 @@ export default function OrgsPage() {
             <strong>{orgs.length} organization(s)</strong>
           </DataRow>
           {orgs.map((o) => (
-            <DataRow key={o.id}>
+            <DataRow key={o.id} data-testid={`org-row-${o.id}`}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div>
                   <strong>{o.name}</strong>
                   <div style={{ opacity: 0.7, fontSize: 12 }}>{o.id}</div>
                 </div>
-                <Link href={`/orgs/${o.id}`}>Open</Link>
+                <Link data-testid={`org-open-${o.id}`} href={`/orgs/${o.id}`}>
+                  Open
+                </Link>
               </div>
             </DataRow>
           ))}

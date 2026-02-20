@@ -119,6 +119,7 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // ---- Middleware
 builder.Services.AddTransient<ExceptionHandlingMiddleware>();
+builder.Services.AddTransient<SecurityHeadersMiddleware>();
 
 // ---- DbContext
 builder.Services.AddDbContext<WorkflowDbContext>(opt =>
@@ -311,6 +312,7 @@ builder.Services.AddRateLimiter(options =>
 
 // Register ONE handler (the real one)
 builder.Services.AddScoped<IAuthorizationHandler, OrgRoleAuthorizationHandler>();
+builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ProblemDetailsAuthorizationMiddlewareResultHandler>();
 
 // Swagger (optional; keep it simple)
 builder.Services.AddEndpointsApiExplorer();
@@ -365,14 +367,16 @@ builder.Services.AddHealthChecks()
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
-app.UseStaticFiles();
+var webRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(webRoot))
+{
+    app.UseStaticFiles();
+}
 
 app.UseSwagger();
-app.UseSwaggerUI(c =>
-{
-    c.InjectJavascript("/swagger-ui/userid.js");
-});
+app.UseSwaggerUI();
 
 app.UseCors("FrontendDev");
 app.UseRateLimiter();
