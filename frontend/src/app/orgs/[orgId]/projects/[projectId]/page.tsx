@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { listProjects, type ProjectDto } from "@/lib/projectsApi";
+import { getProject, type ProjectDto } from "@/lib/projectsApi";
 import {
   Button,
   Card,
@@ -32,13 +32,7 @@ export default function ProjectDetailPage() {
     setError("");
     setProject(null);
     try {
-      const list = await listProjects(orgId);
-      const selected = list.find((p) => p.id === projectId) ?? null;
-      if (!selected) {
-        setError("Project not found in this organization.");
-        return;
-      }
-      setProject(selected);
+      setProject(await getProject(orgId, projectId));
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to load project"));
     }

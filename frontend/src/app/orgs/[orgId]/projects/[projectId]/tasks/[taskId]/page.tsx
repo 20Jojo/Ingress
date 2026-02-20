@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { listMembers, type MemberDto } from "@/lib/membersApi";
 import {
   assignTask,
-  listTasks,
+  getTask,
   updateTaskDetails,
   updateTaskDueDate,
   updateTaskStatus,
@@ -26,6 +26,7 @@ import {
 } from "@/components/ui";
 
 const STATUSES = ["Todo", "InProgress", "Done"] as const;
+const TASK_DETAIL_EVENTS = ["task.*", "member.*"];
 
 export default function TaskDetailPage() {
   const params = useParams<{ orgId: string; projectId: string; taskId: string }>();
@@ -54,15 +55,8 @@ export default function TaskDetailPage() {
     if (!orgId || !projectId || !taskId) return;
     setError("");
     try {
-      const [tasks, memberList] = await Promise.all([listTasks(projectId), listMembers(orgId)]);
-      const selected = tasks.find((t) => t.id === taskId) ?? null;
-      if (!selected) {
-        setTask(null);
-        setError("Task not found in this project.");
-        return;
-      }
-
-      setTask(selected);
+      const [taskItem, memberList] = await Promise.all([getTask(taskId), listMembers(orgId)]);
+      setTask(taskItem);
       setMembers(memberList.filter((m) => !!m.userId));
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to load task"));
@@ -149,7 +143,7 @@ export default function TaskDetailPage() {
   const handleRealtime = useCallback(() => {
     void load();
   }, [load]);
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: TASK_DETAIL_EVENTS, debounceMs: 300 });
 
   return (
     <PageShell wide>

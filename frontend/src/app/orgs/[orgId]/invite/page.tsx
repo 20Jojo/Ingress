@@ -19,6 +19,8 @@ import {
   SuccessBox,
 } from "@/components/ui";
 
+const INVITE_EVENTS = ["invite.*"];
+
 export default function OrgInvitePage() {
   const params = useParams<{ orgId: string }>();
   const orgId = useMemo(
@@ -104,7 +106,7 @@ export default function OrgInvitePage() {
   const handleRealtime = useCallback(() => {
     void load(false);
   }, [load]);
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: INVITE_EVENTS, debounceMs: 350 });
 
   return (
     <PageShell wide>

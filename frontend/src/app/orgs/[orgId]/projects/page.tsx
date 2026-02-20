@@ -17,6 +17,8 @@ import {
   Row,
 } from "@/components/ui";
 
+const PROJECT_EVENTS = ["project.*"];
+
 export default function OrgProjectsPage() {
   const params = useParams<{ orgId: string }>();
   const orgId = useMemo(
@@ -74,7 +76,7 @@ export default function OrgProjectsPage() {
   const handleRealtime = useCallback(() => {
     void load(false);
   }, [load]);
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: PROJECT_EVENTS, debounceMs: 300 });
 
   return (
     <PageShell wide>

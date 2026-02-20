@@ -1,4 +1,4 @@
-using System.Text.Json;
+ï»¿using System.Text.Json;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Distributed;
@@ -13,6 +13,8 @@ namespace Workflow.Api.Endpoints;
 
 public static class OrgMemberEndpoints
 {
+    private static readonly JsonSerializerOptions CacheJsonOptions = new(JsonSerializerDefaults.Web);
+
     public static IEndpointRouteBuilder MapOrgMemberEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/orgs/{orgId:guid}/members")
@@ -38,15 +40,15 @@ public static class OrgMemberEndpoints
 
             var payload = list.Select(m => new
             {
-                m.OrganizationId,
-                m.UserId,
-                Role = m.Role.ToString(),
-                m.JoinedAt
+                organizationId = m.OrganizationId,
+                userId = m.UserId,
+                role = m.Role.ToString(),
+                joinedAt = m.JoinedAt
             }).ToList();
 
             await cache.SetStringAsync(
                 cacheKey,
-                JsonSerializer.Serialize(payload),
+                JsonSerializer.Serialize(payload, CacheJsonOptions),
                 new DistributedCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(2)
@@ -115,10 +117,10 @@ public static class OrgMemberEndpoints
 
             return Results.Created($"/orgs/{orgId}/members", new
             {
-                member.OrganizationId,
-                member.UserId,
-                Role = member.Role.ToString(),
-                member.JoinedAt
+                organizationId = member.OrganizationId,
+                userId = member.UserId,
+                role = member.Role.ToString(),
+                joinedAt = member.JoinedAt
             });
         })
         .RequireAuthorization("OrgAdmin");
@@ -164,7 +166,7 @@ public static class OrgMemberEndpoints
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                    return Conflict("You can’t demote the last Owner. Promote another Owner first, then retry.");
+                    return Conflict("You can't demote the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.UpdateRoleAsync(orgId, userId, newRole, ct);
@@ -224,7 +226,7 @@ public static class OrgMemberEndpoints
             {
                 var owners = await members.CountOwnersAsync(orgId, ct);
                 if (owners <= 1)
-                    return Conflict("You can’t remove the last Owner. Promote another Owner first, then retry.");
+                    return Conflict("You can't remove the last Owner. Promote another Owner first, then retry.");
             }
 
             await members.RemoveAsync(orgId, userId, actorUserId, ct);

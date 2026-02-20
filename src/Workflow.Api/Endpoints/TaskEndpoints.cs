@@ -73,6 +73,29 @@ public static class TaskEndpoints
             return Results.Ok(tasks.Select(TaskResponse.From));
         });
 
+        // GET single task (Member+)
+        app.MapGet("/tasks/{taskId:guid}", async (
+            HttpContext ctx,
+            Guid taskId,
+            ITaskRepository taskRepo,
+            IProjectRepository projectRepo,
+            IOrgMemberRepository membersRepo,
+            CancellationToken ct) =>
+        {
+            var task = await taskRepo.GetAsync(taskId, ct);
+            if (task is null)
+                return Results.NotFound(new { message = "Task not found." });
+
+            var orgId = await projectRepo.GetOrganizationIdAsync(task.ProjectId, ct);
+            if (orgId is null)
+                return Results.BadRequest(new { message = "Project not found for this task." });
+
+            var auth = await OrgAuth.RequireMemberAsync(ctx, orgId.Value, membersRepo, ct);
+            if (!auth.ok) return auth.problem!;
+
+            return Results.Ok(TaskResponse.From(task));
+        });
+
         // UPDATE status (Member+)
         app.MapPatch("/tasks/{taskId:guid}/status", async (
             HttpContext ctx,

@@ -15,6 +15,8 @@ import {
   Row,
 } from "@/components/ui";
 
+const DASHBOARD_EVENTS = ["invite.*", "member.*", "project.*", "task.*"];
+
 export default function OrgDashboardPage() {
   const params = useParams<{ orgId: string }>();
   const orgId = useMemo(
@@ -52,7 +54,7 @@ export default function OrgDashboardPage() {
     void load(false);
   }, [load]);
 
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: DASHBOARD_EVENTS, debounceMs: 500 });
 
   return (
     <PageShell wide>
@@ -176,4 +178,3 @@ function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
-

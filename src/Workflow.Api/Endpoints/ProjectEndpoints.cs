@@ -27,6 +27,21 @@ public static class ProjectEndpoints
         })
         .RequireAuthorization("OrgMember");
 
+        // Member+ can get single project in org
+        group.MapGet("/{projectId:guid}", async (
+            Guid orgId,
+            Guid projectId,
+            IProjectRepository projects,
+            CancellationToken ct) =>
+        {
+            var project = await projects.GetAsync(projectId, ct);
+            if (project is null || project.OrganizationId != orgId)
+                return Results.NotFound(new { message = "Project not found." });
+
+            return Results.Ok(new { project.Id, project.OrganizationId, project.Name });
+        })
+        .RequireAuthorization("OrgMember");
+
         // Admin/Owner only: create project
         group.MapPost("", async (
             Guid orgId,

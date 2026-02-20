@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 
 const ROLES = ["Member", "Admin", "Owner"] as const;
+const MEMBER_EVENTS = ["member.*"];
 
 export default function OrgMembersPage() {
   const params = useParams<{ orgId: string }>();
@@ -86,7 +87,7 @@ export default function OrgMembersPage() {
   const handleRealtime = useCallback(() => {
     void load();
   }, [load]);
-  useOrgRealtime(orgId, handleRealtime);
+  useOrgRealtime(orgId, handleRealtime, { eventTypes: MEMBER_EVENTS, debounceMs: 300 });
 
   return (
     <PageShell wide>
