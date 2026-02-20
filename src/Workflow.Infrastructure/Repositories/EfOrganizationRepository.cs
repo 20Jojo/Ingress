@@ -44,4 +44,20 @@ public sealed class EfOrganizationRepository : IOrganizationRepository
             .Select(x => new Organization(x.Id, x.Name))
             .ToList();
     }
+
+    public async Task<IReadOnlyList<Organization>> ListByUserAsync(Guid userId, CancellationToken ct)
+    {
+        var entities = await (
+            from org in _db.Organizations.AsNoTracking()
+            join member in _db.OrgMembers.AsNoTracking()
+                on org.Id equals member.OrganizationId
+            where member.UserId == userId && !member.IsDeleted
+            orderby org.Name
+            select new { org.Id, org.Name }
+        ).ToListAsync(ct);
+
+        return entities
+            .Select(x => new Organization(x.Id, x.Name))
+            .ToList();
+    }
 }

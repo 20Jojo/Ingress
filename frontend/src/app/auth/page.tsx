@@ -97,16 +97,27 @@ export default function AuthPage() {
         <Card>
           <h2 style={h2Style}>Register</h2>
           <Label>Email</Label>
-          <Input value={regEmail} onChange={(e) => setRegEmail(e.target.value)} placeholder="owner@test.com" />
+          <Input
+            data-testid="auth-register-email"
+            value={regEmail}
+            onChange={(e) => setRegEmail(e.target.value)}
+            placeholder="owner@test.com"
+          />
 
           <div style={fieldGap}>
             <Label>Display name</Label>
-            <Input value={regDisplayName} onChange={(e) => setRegDisplayName(e.target.value)} placeholder="Owner" />
+            <Input
+              data-testid="auth-register-display-name"
+              value={regDisplayName}
+              onChange={(e) => setRegDisplayName(e.target.value)}
+              placeholder="Owner"
+            />
           </div>
 
           <div style={fieldGap}>
             <Label>Password</Label>
             <Input
+              data-testid="auth-register-password"
               value={regPassword}
               onChange={(e) => setRegPassword(e.target.value)}
               type="password"
@@ -114,17 +125,25 @@ export default function AuthPage() {
             />
           </div>
 
-          <Button onClick={onRegister}>Register</Button>
+          <Button data-testid="auth-register-submit" onClick={onRegister}>
+            Register
+          </Button>
         </Card>
 
         <Card>
           <h2 style={h2Style}>Login</h2>
           <Label>Email</Label>
-          <Input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="owner@test.com" />
+          <Input
+            data-testid="auth-login-email"
+            value={loginEmail}
+            onChange={(e) => setLoginEmail(e.target.value)}
+            placeholder="owner@test.com"
+          />
 
           <div style={fieldGap}>
             <Label>Password</Label>
             <Input
+              data-testid="auth-login-password"
               value={loginPassword}
               onChange={(e) => setLoginPassword(e.target.value)}
               type="password"
@@ -132,13 +151,15 @@ export default function AuthPage() {
             />
           </div>
 
-          <Button onClick={onLogin}>Login</Button>
+          <Button data-testid="auth-login-submit" onClick={onLogin}>
+            Login
+          </Button>
 
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eee" }}>
-            <div style={{ marginBottom: 8 }}>
+            <div data-testid="auth-logged-in" style={{ marginBottom: 8 }}>
               <strong>Logged in:</strong> {loggedIn ? "Yes" : "No"}
             </div>
-            <Button onClick={onLogout} variant="secondary">
+            <Button data-testid="auth-logout" onClick={onLogout} variant="secondary">
               Logout
             </Button>
           </div>
@@ -147,10 +168,10 @@ export default function AuthPage() {
 
       <Card>
         <h2 style={h2Style}>Token status</h2>
-        <div>
+        <div data-testid="auth-access-token">
           <strong>Access token:</strong> {accessToken ? "present" : "missing"}
         </div>
-        <div>
+        <div data-testid="auth-refresh-token">
           <strong>Refresh token:</strong> {refreshToken ? "present" : "missing"}
         </div>
 

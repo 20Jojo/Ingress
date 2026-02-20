@@ -1,4 +1,4 @@
-# Current Architecture (Stages 0-12)
+# Current Architecture (Stages 0-15)
 
 ## Scope
 Monorepo architecture with:
@@ -118,6 +118,49 @@ Monorepo architecture with:
 - Standardized org member endpoint payloads and cached JSON to camelCase
 - Removed frontend casing-normalization shims in API clients
 - Updated detail pages to call direct detail endpoints instead of list+find
+
+### Stage 14: Testing & Verification (complete)
+- Stage 14.1 complete:
+  - Playwright smoke E2E for `/ping` + `/auth`
+- Stage 14.2 complete:
+  - Playwright happy path E2E for org -> project -> task
+- Stage 14.3 complete:
+  - Playwright invite accept + member role change flow stabilized
+- Stage 14.4 complete:
+  - Backend integration tests for auth/org RBAC critical paths
+  - Coverage includes:
+    - protected endpoint requires bearer token
+    - register/login/create-org/list-org success path
+    - org list scoped to current user membership
+    - non-member forbidden on org admin endpoint
+- Stage 14.5 complete:
+  - Backend invite/member/task critical-path integration tests
+  - Coverage includes:
+    - invite accept path to active org membership
+    - member task creation allowed
+    - outsider task list forbidden
+    - assign non-member rejected
+    - member project creation forbidden
+- Stage 14.6 complete:
+  - Backend realtime propagation integration test
+  - Coverage includes:
+    - authenticated SignalR join for org group
+    - org-scoped broadcaster emits `project.created`
+    - org-scoped `org_event` delivery confirmation
+- Stage 14.7 complete:
+  - final verification checklist and runbook finalized
+  - frontend and backend test assets documented
+
+### Stage 15: Prod Readiness (complete)
+- Security hardening:
+  - API security headers middleware added
+  - JWT-only auth behavior retained and documented
+- Observability hardening:
+  - realtime metrics for connections/joins/broadcasts
+  - structured realtime lifecycle logging
+- Ops hardening:
+  - runbook updated with Stage 15 checklist
+  - production readiness summary documented
 
 ---
 

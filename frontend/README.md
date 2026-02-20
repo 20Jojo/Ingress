@@ -38,6 +38,17 @@ npm run verify:full
 - `verify`: lint + typecheck (portable CI/sandbox gate)
 - `verify:full`: verify + production build
 
+## E2E Smoke (Stage 14.1)
+
+```bash
+npx playwright install
+npm run e2e
+```
+
+Notes:
+- Starts/reuses the frontend dev server automatically.
+- Requires backend API and dependent services to be running.
+
 ## Core Routes
 
 - `/ping`

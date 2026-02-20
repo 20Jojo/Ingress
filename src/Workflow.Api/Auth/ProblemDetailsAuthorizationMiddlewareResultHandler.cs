@@ -30,7 +30,7 @@ public sealed class ProblemDetailsAuthorizationMiddlewareResultHandler : IAuthor
             {
                 title = "Unauthorized",
                 status = 401,
-                detail = "Missing or invalid X-User-Id header."
+                detail = "Missing or invalid bearer token."
             });
 
             return;

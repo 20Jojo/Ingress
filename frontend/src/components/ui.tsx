@@ -47,14 +47,19 @@ export function Row({ children }: { children: ReactNode }) {
   return <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{children}</div>;
 }
 
-export function Card({ children }: { children: ReactNode }) {
+export function Card({
+  children,
+  ...props
+}: { children: ReactNode } & React.HTMLAttributes<HTMLElement>) {
   return (
     <section
+      {...props}
       style={{
         border: "1px solid var(--border)",
         background: "var(--surface)",
         borderRadius: 12,
         padding: 12,
+        ...(props.style ?? {}),
       }}
     >
       {children}
@@ -78,8 +83,18 @@ export function DataList({ children }: { children: ReactNode }) {
   );
 }
 
-export function DataRow({ children }: { children: ReactNode }) {
-  return <div style={{ padding: 12, borderBottom: "1px solid var(--border-soft)" }}>{children}</div>;
+export function DataRow({
+  children,
+  ...props
+}: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      {...props}
+      style={{ padding: 12, borderBottom: "1px solid var(--border-soft)", ...(props.style ?? {}) }}
+    >
+      {children}
+    </div>
+  );
 }
 
 export function Label({ children }: { children: ReactNode }) {
@@ -121,14 +136,19 @@ export function Button({
   );
 }
 
-export function ErrorBox({ children }: { children: ReactNode }) {
+export function ErrorBox({
+  children,
+  ...props
+}: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      {...props}
       style={{
         marginTop: 12,
         padding: 12,
         borderRadius: 10,
         border: "1px solid var(--error-border)",
+        ...(props.style ?? {}),
       }}
     >
       {children}
@@ -136,14 +156,19 @@ export function ErrorBox({ children }: { children: ReactNode }) {
   );
 }
 
-export function SuccessBox({ children }: { children: ReactNode }) {
+export function SuccessBox({
+  children,
+  ...props
+}: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      {...props}
       style={{
         marginTop: 12,
         padding: 12,
         borderRadius: 10,
         border: "1px solid var(--ok-border)",
+        ...(props.style ?? {}),
       }}
     >
       {children}

@@ -30,10 +30,10 @@ public sealed class OrgRealtimeBroadcaster
 
         await _hub.Clients.Group(OrgEventsHub.OrgGroupName(orgId))
             .SendAsync("org_event", ev);
+        RealtimeMetrics.Broadcast(type);
 
-        _logger.LogDebug(
+        _logger.LogInformation(
             "Realtime event broadcast: type={Type}, orgId={OrgId}",
             type, orgId);
     }
 }
-

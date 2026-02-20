@@ -81,3 +81,23 @@ docker volume prune -f   # only removes UNUSED volumes
 - OTel gRPC: `localhost:4317`
 - OTel HTTP: `localhost:4318`
 - OTel Prom metrics scrape endpoint: http://localhost:9464/metrics
+
+## Stage 15 Readiness Checklist
+1. Security
+- Confirm API responses include hardening headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`).
+- Confirm JWT-only auth works for protected endpoints (no `X-User-Id` dependency).
+
+2. Verification
+- Frontend:
+  - `cd frontend`
+  - `npm run verify`
+  - `npm run e2e`
+- Backend:
+  - `dotnet test Workflow.Api.IntegrationTests/Workflow.Api.IntegrationTests.csproj`
+
+3. Realtime observability
+- Confirm connection/broadcast metrics are exposed through OTel pipeline.
+- Watch logs for:
+  - realtime connected/disconnected
+  - join success/denied
+  - event broadcasts by type/org

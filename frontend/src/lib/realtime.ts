@@ -4,7 +4,7 @@ import {
   HubConnectionState,
   LogLevel,
 } from "@microsoft/signalr";
-import { getAccessToken } from "@/lib/auth";
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
 
 type Callback = (event: OrgRealtimeEvent) => void;
 
@@ -29,6 +29,7 @@ export type RealtimeConnectionStatus =
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 const HUB_URL = API_BASE ? `${API_BASE}/hubs/org-events` : "";
+let refreshPromise: Promise<string | null> | null = null;
 
 let connection: HubConnection | null = null;
 let starting: Promise<void> | null = null;
@@ -88,10 +89,16 @@ export async function subscribeOrgEvents(
 }
 
 async function ensureConnected(): Promise<boolean> {
+  const token = await getRealtimeAccessToken();
+  if (!token) {
+    setStatus("offline");
+    return false;
+  }
+
   if (!connection) {
     connection = new HubConnectionBuilder()
       .withUrl(HUB_URL, {
-        accessTokenFactory: () => getAccessToken() ?? "",
+        accessTokenFactory: async () => (await getRealtimeAccessToken()) ?? "",
         withCredentials: false,
       })
       .withAutomaticReconnect()
@@ -148,6 +155,44 @@ async function ensureConnected(): Promise<boolean> {
     setStatus("offline");
     return false;
   }
+}
+
+async function getRealtimeAccessToken(): Promise<string | null> {
+  const access = getAccessToken();
+  if (access) return access;
+  return refreshAccessToken();
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise;
+
+  refreshPromise = (async () => {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken || !API_BASE) return null;
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        clearTokens();
+        return null;
+      }
+
+      const data = (await res.json()) as { accessToken: string; refreshToken: string };
+      setTokens(data.accessToken, data.refreshToken);
+      return data.accessToken;
+    } catch {
+      return null;
+    }
+  })().finally(() => {
+    refreshPromise = null;
+  });
+
+  return refreshPromise;
 }
 
 async function joinOrg(orgId: string) {
