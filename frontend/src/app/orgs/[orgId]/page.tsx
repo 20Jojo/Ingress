@@ -7,6 +7,7 @@ import { getOrg, listOrgMembers, type OrgDto, type OrgMemberDto } from "@/lib/or
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
 import {
   Button,
+  Card,
   DataList,
   DataRow,
   EmptyState,
@@ -76,20 +77,31 @@ export default function OrgDetailPage() {
   return (
     <PageShell>
       <Row>
-        <Link href="/orgs">Back to orgs</Link>
+        <Link href="/orgs">Back to organizations</Link>
       </Row>
 
       <PageTitle title={org?.name ?? "Organization"} subtitle={<code>{orgId}</code>} />
 
-      <Row>
-        <Link href={`/orgs/${orgId}/invite`}>Invite members</Link>
-        <Link href={`/orgs/${orgId}/members`}>Manage Members</Link>
-        <Link href={`/orgs/${orgId}/projects`}>Projects</Link>
-        <Link href={`/orgs/${orgId}/dashboard`}>Dashboard</Link>
-        <Button onClick={() => void load(true)} variant="secondary">
-          Reload
-        </Button>
-      </Row>
+      <Card>
+        <div style={quickActionTitle}>Workspace Actions</div>
+        <Row>
+          <Link href={`/orgs/${orgId}/invite`} style={pillLinkStyle}>
+            Invite members
+          </Link>
+          <Link href={`/orgs/${orgId}/members`} style={pillLinkStyle}>
+            Manage members
+          </Link>
+          <Link href={`/orgs/${orgId}/projects`} style={pillLinkStyle}>
+            Projects
+          </Link>
+          <Link href={`/orgs/${orgId}/dashboard`} style={pillLinkStyle}>
+            Dashboard
+          </Link>
+          <Button onClick={() => void load(true)} variant="secondary">
+            Reload
+          </Button>
+        </Row>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
       {membersAccessMessage && <EmptyState>{membersAccessMessage}</EmptyState>}
@@ -137,3 +149,21 @@ function memberKey(member: OrgMemberDto, index: number): string {
   const joined = member.joinedAt || `joined-${index}`;
   return `${org}:${user}:${joined}:${index}`;
 }
+
+const quickActionTitle: React.CSSProperties = {
+  fontWeight: 700,
+  marginBottom: 10,
+  fontSize: 14,
+  color: "var(--text-muted)",
+};
+
+const pillLinkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  padding: "8px 12px",
+  borderRadius: 9999,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontWeight: 500,
+  fontSize: 13,
+};

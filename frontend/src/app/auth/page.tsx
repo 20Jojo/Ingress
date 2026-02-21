@@ -87,15 +87,16 @@ export default function AuthPage() {
   }
 
   return (
-    <PageShell>
+    <PageShell wide>
       <PageTitle
         title="Auth"
-        subtitle="Register a user, then login to store JWT + refresh token in localStorage."
+        subtitle="Register and sign in with JWT tokens stored in localStorage."
       />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <Card>
-          <h2 style={h2Style}>Register</h2>
+      <div style={panelGrid}>
+        <Card style={panelCard}>
+          <h2 style={h2Style}>Create account</h2>
+          <p style={helperStyle}>Use this in local dev to seed users quickly.</p>
           <Label>Email</Label>
           <Input
             data-testid="auth-register-email"
@@ -130,8 +131,9 @@ export default function AuthPage() {
           </Button>
         </Card>
 
-        <Card>
-          <h2 style={h2Style}>Login</h2>
+        <Card style={panelCard}>
+          <h2 style={h2Style}>Sign in</h2>
+          <p style={helperStyle}>Generates access and refresh tokens for authenticated routes.</p>
           <Label>Email</Label>
           <Input
             data-testid="auth-login-email"
@@ -155,7 +157,7 @@ export default function AuthPage() {
             Login
           </Button>
 
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #eee" }}>
+          <div style={logoutSection}>
             <div data-testid="auth-logged-in" style={{ marginBottom: 8 }}>
               <strong>Logged in:</strong> {loggedIn ? "Yes" : "No"}
             </div>
@@ -167,7 +169,7 @@ export default function AuthPage() {
       </div>
 
       <Card>
-        <h2 style={h2Style}>Token status</h2>
+        <h2 style={h2Style}>Session status</h2>
         <div data-testid="auth-access-token">
           <strong>Access token:</strong> {accessToken ? "present" : "missing"}
         </div>
@@ -183,12 +185,36 @@ export default function AuthPage() {
 }
 
 const h2Style: React.CSSProperties = {
-  fontSize: 20,
+  fontSize: 22,
   fontWeight: 700,
-  marginBottom: 12,
+  marginBottom: 8,
 };
 
 const fieldGap: React.CSSProperties = { marginTop: 10 };
+
+const helperStyle: React.CSSProperties = {
+  marginTop: 0,
+  marginBottom: 12,
+  color: "var(--text-muted)",
+  fontSize: 13,
+};
+
+const logoutSection: React.CSSProperties = {
+  marginTop: 16,
+  paddingTop: 16,
+  borderTop: "1px solid var(--border-soft)",
+};
+
+const panelGrid: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+  gap: 16,
+  alignItems: "start",
+};
+
+const panelCard: React.CSSProperties = {
+  minHeight: 300,
+};
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) {

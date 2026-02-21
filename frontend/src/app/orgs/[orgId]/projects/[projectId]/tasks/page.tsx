@@ -9,6 +9,7 @@ import { assignTask, createTask, listTasks, updateTaskStatus, type TaskDto } fro
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
 import {
   Button,
+  Card,
   DataList,
   DataRow,
   EmptyState,
@@ -136,30 +137,34 @@ export default function ProjectTasksPage() {
         <Link href={`/orgs/${orgId}/projects/${projectId}`}>Back to project</Link>
       </Row>
 
-      <PageTitle title="Tasks" subtitle={<span>Org: {orgId} | Project: {projectId}</span>} />
+      <PageTitle title="Tasks" subtitle={<span>Execution board for project {projectId}</span>} />
 
-      <div style={{ display: "grid", gap: 10 }}>
-        <Input
-          data-testid="task-create-title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title"
-        />
-        <TextArea
-          data-testid="task-create-description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Task description (optional)"
-        />
-        <Row>
-          <Button data-testid="task-create-submit" onClick={onCreate} disabled={busy}>
-            {busy ? "Creating..." : "Create Task"}
-          </Button>
-          <Button onClick={() => void load(true)} variant="secondary">
-            Reload
-          </Button>
-        </Row>
-      </div>
+      <Card style={{ marginBottom: 12 }}>
+        <div style={{ display: "grid", gap: 10 }}>
+          <Input
+            data-testid="task-create-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Task title"
+            aria-label="Task title"
+          />
+          <TextArea
+            data-testid="task-create-description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Task description (optional)"
+            aria-label="Task description"
+          />
+          <Row>
+            <Button data-testid="task-create-submit" onClick={onCreate} disabled={busy}>
+              {busy ? "Creating..." : "Create Task"}
+            </Button>
+            <Button onClick={() => void load(true)} variant="secondary">
+              Reload
+            </Button>
+          </Row>
+        </div>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
       {tasks === null && <LoadingCard label="Loading tasks..." />}
@@ -194,6 +199,7 @@ export default function ProjectTasksPage() {
                       value={task.status}
                       onChange={(e) => void onChangeStatus(task, e.target.value, key)}
                       disabled={busyThis || !taskId}
+                      aria-label={`Status for ${task.title || "task"}`}
                     >
                       {STATUSES.map((s) => (
                         <option key={s} value={s}>
@@ -206,6 +212,7 @@ export default function ProjectTasksPage() {
                       value={task.assigneeUserId ?? ""}
                       onChange={(e) => void onAssign(task, e.target.value, key)}
                       disabled={busyThis || !taskId}
+                      aria-label={`Assignee for ${task.title || "task"}`}
                     >
                       <option value="">Unassigned</option>
                       {members.map((m, mIdx) => (
@@ -249,7 +256,7 @@ const taskRow: React.CSSProperties = {
 };
 
 const subtle: React.CSSProperties = {
-  opacity: 0.7,
+  color: "var(--text-muted)",
   fontSize: 12,
   marginTop: 4,
 };

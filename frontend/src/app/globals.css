@@ -1,50 +1,244 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f7fb;
+  --foreground: #0f172a;
   --surface: #ffffff;
-  --surface-muted: #f8f8f8;
-  --border: #dddddd;
-  --border-soft: #f2f2f2;
-  --text-muted: #666666;
-  --brand: #111111;
+  --surface-muted: #eef2ff;
+  --border: #d8e1ee;
+  --border-soft: #ebf0f7;
+  --text-muted: #5c6b85;
+  --brand: #2563eb;
   --brand-contrast: #ffffff;
-  --danger: #c41212;
-  --danger-border: #d11f1f;
-  --ok-border: #cfe8cf;
-  --error-border: #f3c9c9;
+  --brand-soft: #e8f0ff;
+  --danger: #c62828;
+  --danger-border: #ef9a9a;
+  --ok-border: #9cd3b0;
+  --error-border: #f7b7b7;
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 16px rgba(15, 23, 42, 0.04);
+  --shadow-strong: 0 8px 28px rgba(37, 99, 235, 0.16);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI", Arial, sans-serif;
-  --font-mono: "Consolas", "Courier New", monospace;
+  --font-sans: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --surface: #111111;
-    --surface-muted: #151515;
-    --border: #2d2d2d;
-    --border-soft: #242424;
-    --text-muted: #b0b0b0;
-    --brand: #f1f1f1;
-    --brand-contrast: #111111;
-    --danger: #ff7b7b;
-    --danger-border: #ff5252;
-    --ok-border: #2e5c38;
-    --error-border: #6b2f2f;
+    --background: #0d111b;
+    --foreground: #e5ebf7;
+    --surface: #121a2a;
+    --surface-muted: #1a2440;
+    --border: #27324b;
+    --border-soft: #1b2438;
+    --text-muted: #a2b2d2;
+    --brand: #7aa2ff;
+    --brand-contrast: #071126;
+    --brand-soft: #1d2d57;
+    --danger: #ff8d8d;
+    --danger-border: #9f4a4a;
+    --ok-border: #3b7357;
+    --error-border: #7a3f3f;
+    --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.34), 0 8px 24px rgba(0, 0, 0, 0.28);
+    --shadow-strong: 0 10px 30px rgba(122, 162, 255, 0.18);
   }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-sans);
+  line-height: 1.45;
+  letter-spacing: 0.01em;
+  margin: 0;
+  background-image:
+    radial-gradient(circle at 12% -8%, color-mix(in srgb, var(--brand) 11%, transparent) 0, transparent 36%),
+    radial-gradient(circle at 94% 0%, color-mix(in srgb, var(--brand) 9%, transparent) 0, transparent 34%);
+}
+
+a {
+  color: color-mix(in srgb, var(--brand) 86%, var(--foreground) 14%);
+}
+
+a:hover {
+  color: var(--brand);
+}
+
+a:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand) 70%, transparent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.app-main {
+  padding-bottom: 28px;
+}
+
+.wf-page-shell {
+  animation: wf-fade-up 180ms ease-out;
+}
+
+.wf-card {
+  transition: transform 150ms ease, box-shadow 180ms ease, border-color 150ms ease;
+}
+
+.wf-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-strong);
+}
+
+.wf-data-list {
+  transition: box-shadow 180ms ease, border-color 140ms ease;
+}
+
+.wf-data-list:hover {
+  box-shadow: var(--shadow-strong);
+}
+
+.wf-data-row {
+  transition: background-color 120ms ease;
+}
+
+.wf-data-row:hover {
+  background: color-mix(in srgb, var(--surface) 92%, var(--brand-soft) 8%);
+}
+
+.wf-label {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.wf-input {
+  transition: border-color 120ms ease, box-shadow 140ms ease, background-color 120ms ease;
+}
+
+.wf-input:focus-visible {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 22%, transparent);
+  background: var(--surface);
+}
+
+.wf-btn {
+  will-change: transform;
+}
+
+.wf-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.wf-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.wf-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 28%, transparent);
+}
+
+.wf-alert {
+  background: color-mix(in srgb, var(--surface) 94%, var(--brand-soft) 6%);
+}
+
+.wf-alert-error {
+  background: color-mix(in srgb, var(--surface) 94%, #ffefef 6%);
+}
+
+.wf-alert-success {
+  background: color-mix(in srgb, var(--surface) 94%, #e9fff2 6%);
+}
+
+.wf-empty {
+  padding: 14px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--brand-soft) 4%);
+}
+
+.wf-top-nav {
+  row-gap: 8px;
+}
+
+.wf-nav-link {
+  transition: transform 120ms ease, box-shadow 140ms ease, border-color 120ms ease;
+}
+
+.wf-nav-link:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-soft);
+}
+
+.wf-nav-link-active:hover {
+  box-shadow: var(--shadow-strong);
+}
+
+.wf-status-pill {
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.wf-status-pill:hover {
+  border-color: color-mix(in srgb, var(--brand) 34%, var(--border) 66%);
+}
+
+@media (max-width: 860px) {
+  .wf-page-shell {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .wf-row {
+    align-items: stretch !important;
+  }
+
+  .wf-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wf-top-nav {
+    gap: 8px !important;
+  }
+
+  .wf-status-pill {
+    margin-left: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@keyframes wf-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes wf-spin {

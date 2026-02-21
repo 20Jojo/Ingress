@@ -64,24 +64,34 @@ export default function OrgsPage() {
   }, []);
 
   return (
-    <PageShell>
-      <PageTitle title="Organizations" />
+    <PageShell wide>
+      <PageTitle
+        title="Organizations"
+        subtitle="Create and manage workspaces with role-based access."
+      />
 
-      <Row>
-        <div>
-          Logged in: <strong>{loggedIn === null ? "Checking..." : loggedIn ? "Yes" : "No"}</strong>
-        </div>
-        <Link href="/auth">/auth</Link>
-        <Link href="/users">/users</Link>
-      </Row>
+      <Card style={{ marginBottom: 12 }}>
+        <Row>
+          <div style={statusTextStyle}>
+            Logged in: <strong>{loggedIn === null ? "Checking..." : loggedIn ? "Yes" : "No"}</strong>
+          </div>
+          <Link href="/auth" style={quickLinkStyle}>
+            Auth
+          </Link>
+          <Link href="/users" style={quickLinkStyle}>
+            Users
+          </Link>
+        </Row>
+      </Card>
 
-      <Card>
+      <Card style={{ marginBottom: 12 }}>
         <Row>
           <Input
             data-testid="org-create-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="New organization name"
+            aria-label="Organization name"
           />
           <Button data-testid="org-create-submit" onClick={onCreate} disabled={busy}>
             {busy ? "Creating..." : "Create"}
@@ -105,9 +115,9 @@ export default function OrgsPage() {
               <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
                 <div>
                   <strong>{o.name}</strong>
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>{o.id}</div>
+                  <div style={orgIdStyle}>{o.id}</div>
                 </div>
-                <Link data-testid={`org-open-${o.id}`} href={`/orgs/${o.id}`}>
+                <Link data-testid={`org-open-${o.id}`} href={`/orgs/${o.id}`} style={quickLinkStyle}>
                   Open
                 </Link>
               </div>
@@ -125,3 +135,24 @@ function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
+
+const quickLinkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  padding: "8px 12px",
+  borderRadius: 9999,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const statusTextStyle: React.CSSProperties = {
+  color: "var(--text-muted)",
+  marginRight: 2,
+};
+
+const orgIdStyle: React.CSSProperties = {
+  color: "var(--text-muted)",
+  fontSize: 12,
+};

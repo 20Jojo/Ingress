@@ -148,10 +148,15 @@ export default function TaskDetailPage() {
   return (
     <PageShell wide>
       <Row>
-        <Link href={`/orgs/${orgId}/projects/${projectId}/tasks`}>Back to tasks</Link>
+        <Link href={`/orgs/${orgId}/projects/${projectId}/tasks`} style={quickLinkStyle}>
+          Back to tasks
+        </Link>
       </Row>
 
-      <PageTitle title={task?.title || "Task"} subtitle={<span>Task ID: {taskId}</span>} />
+      <PageTitle
+        title={task?.title || "Task"}
+        subtitle={<span>Detailed management for task {taskId}</span>}
+      />
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
@@ -160,7 +165,12 @@ export default function TaskDetailPage() {
           <Card>
             <h2 style={h2}>Status + Assignee</h2>
             <div style={twoCol}>
-              <Select value={task.status} onChange={(e) => void onSetStatus(e.target.value)} disabled={busy}>
+              <Select
+                value={task.status}
+                onChange={(e) => void onSetStatus(e.target.value)}
+                disabled={busy}
+                aria-label="Task status"
+              >
                 {STATUSES.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -172,6 +182,7 @@ export default function TaskDetailPage() {
                 value={task.assigneeUserId ?? ""}
                 onChange={(e) => void onSetAssignee(e.target.value)}
                 disabled={busy}
+                aria-label="Task assignee"
               >
                 <option value="">Unassigned</option>
                 {members.map((m, idx) => (
@@ -189,11 +200,13 @@ export default function TaskDetailPage() {
               value={titleInput}
               onChange={(e) => setTitleInput(e.target.value)}
               placeholder={`Title (${task.title || "untitled"})`}
+              aria-label="Task title"
             />
             <TextArea
               value={descriptionInput}
               onChange={(e) => setDescriptionInput(e.target.value)}
               placeholder={task.description ?? "Description"}
+              aria-label="Task description"
               style={{ marginTop: 10 }}
             />
             <Button onClick={onSaveDetails} disabled={busy} style={{ marginTop: 10 }}>
@@ -203,10 +216,15 @@ export default function TaskDetailPage() {
 
           <Card>
             <h2 style={h2}>Due Date</h2>
-            <div style={{ opacity: 0.8, marginBottom: 8 }}>
+            <div style={subtleInfo}>
               Current: {task.dueAt ? new Date(task.dueAt).toLocaleString() : "none"}
             </div>
-            <Input type="datetime-local" value={dueInput} onChange={(e) => setDueInput(e.target.value)} />
+            <Input
+              type="datetime-local"
+              value={dueInput}
+              onChange={(e) => setDueInput(e.target.value)}
+              aria-label="Task due date"
+            />
             <Row>
               <Button onClick={onSaveDueDate} disabled={busy}>
                 Save Due Date
@@ -219,9 +237,9 @@ export default function TaskDetailPage() {
 
           <Card>
             <h2 style={h2}>Metadata</h2>
-            <div>Created: {task.createdAt ? new Date(task.createdAt).toLocaleString() : "-"}</div>
-            <div>Project ID: {task.projectId || "-"}</div>
-            <div>Task ID: {task.id || "-"}</div>
+            <div style={metaRow}>Created: {task.createdAt ? new Date(task.createdAt).toLocaleString() : "-"}</div>
+            <div style={metaRow}>Project ID: {task.projectId || "-"}</div>
+            <div style={metaRow}>Task ID: {task.id || "-"}</div>
           </Card>
         </div>
       )}
@@ -239,6 +257,29 @@ const twoCol: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "1fr 1fr",
   gap: 10,
+};
+
+const quickLinkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  padding: "8px 12px",
+  borderRadius: 9999,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const subtleInfo: React.CSSProperties = {
+  color: "var(--text-muted)",
+  marginBottom: 8,
+  fontSize: 13,
+};
+
+const metaRow: React.CSSProperties = {
+  color: "var(--text-muted)",
+  marginBottom: 6,
+  fontSize: 14,
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {

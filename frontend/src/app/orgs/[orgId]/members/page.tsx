@@ -8,6 +8,7 @@ import { useToast } from "@/components/toast";
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
 import {
   Button,
+  Card,
   DataList,
   DataRow,
   EmptyState,
@@ -99,16 +100,18 @@ export default function OrgMembersPage() {
   return (
     <PageShell wide>
       <Row>
-        <Link href={`/orgs/${orgId}`}>Back to org</Link>
+        <Link href={`/orgs/${orgId}`}>Back to organization</Link>
       </Row>
 
-      <PageTitle title="Members" subtitle={<span>Org: {orgId}</span>} />
+      <PageTitle title="Members" subtitle={<span>Team access and role management for org {orgId}</span>} />
 
-      <Row>
-        <Button onClick={() => void load()} variant="secondary">
-          Reload
-        </Button>
-      </Row>
+      <Card style={{ marginBottom: 12 }}>
+        <Row>
+          <Button onClick={() => void load()} variant="secondary">
+            Reload list
+          </Button>
+        </Row>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
       {members === null && !error && <LoadingCard label="Loading members..." />}
@@ -187,7 +190,7 @@ const memberRow: React.CSSProperties = {
 
 const subtle: React.CSSProperties = {
   fontSize: 12,
-  opacity: 0.7,
+  color: "var(--text-muted)",
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {

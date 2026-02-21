@@ -7,11 +7,13 @@ import { createProject, listProjects, type ProjectDto } from "@/lib/projectsApi"
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
 import {
   Button,
+  Card,
   DataList,
   DataRow,
   EmptyState,
   ErrorBox,
   Input,
+  LoadingCard,
   PageShell,
   PageTitle,
   Row,
@@ -81,28 +83,32 @@ export default function OrgProjectsPage() {
   return (
     <PageShell wide>
       <Row>
-        <Link href={`/orgs/${orgId}`}>Back to org</Link>
+        <Link href={`/orgs/${orgId}`}>Back to organization</Link>
       </Row>
 
-      <PageTitle title="Projects" subtitle={<span>Org: {orgId}</span>} />
+      <PageTitle title="Projects" subtitle={<span>Create and manage projects for org {orgId}</span>} />
 
-      <Row>
-        <Input
-          data-testid="project-create-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New project name"
-          style={{ flex: 1, minWidth: 220 }}
-        />
-        <Button data-testid="project-create-submit" disabled={busy} onClick={onCreate}>
-          {busy ? "Creating..." : "Create"}
-        </Button>
-        <Button onClick={() => void load(true)} variant="secondary">
-          Reload
-        </Button>
-      </Row>
+      <Card style={{ marginBottom: 12 }}>
+        <Row>
+          <Input
+            data-testid="project-create-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="New project name"
+            aria-label="Project name"
+            style={{ flex: 1, minWidth: 220 }}
+          />
+          <Button data-testid="project-create-submit" disabled={busy} onClick={onCreate}>
+            {busy ? "Creating..." : "Create"}
+          </Button>
+          <Button onClick={() => void load(true)} variant="secondary">
+            Reload
+          </Button>
+        </Row>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
+      {projects === null && !error && <LoadingCard label="Loading projects..." />}
 
       {projects && projects.length === 0 && <EmptyState>No projects yet.</EmptyState>}
 

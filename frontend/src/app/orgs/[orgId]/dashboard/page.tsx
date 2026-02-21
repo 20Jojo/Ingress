@@ -59,19 +59,29 @@ export default function OrgDashboardPage() {
   return (
     <PageShell wide>
       <Row>
-        <Link href={`/orgs/${orgId}`}>Back to org</Link>
+        <Link href={`/orgs/${orgId}`} style={quickLinkStyle}>
+          Back to org
+        </Link>
       </Row>
 
-      <PageTitle title="Dashboard" subtitle={<span>Org: {orgId}</span>} />
+      <PageTitle title="Dashboard" subtitle={<span>Realtime overview for organization {orgId}</span>} />
 
-      <Row>
-        <Button onClick={() => void load(true)} variant="secondary">
-          Reload
-        </Button>
-        <Link href={`/orgs/${orgId}/projects`}>Projects</Link>
-        <Link href={`/orgs/${orgId}/members`}>Members</Link>
-        <Link href={`/orgs/${orgId}/invite`}>Invites</Link>
-      </Row>
+      <Card style={{ marginBottom: 12 }}>
+        <Row>
+          <Button onClick={() => void load(true)} variant="secondary">
+            Reload
+          </Button>
+          <Link href={`/orgs/${orgId}/projects`} style={quickLinkStyle}>
+            Projects
+          </Link>
+          <Link href={`/orgs/${orgId}/members`} style={quickLinkStyle}>
+            Members
+          </Link>
+          <Link href={`/orgs/${orgId}/invite`} style={quickLinkStyle}>
+            Invites
+          </Link>
+        </Row>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
@@ -101,7 +111,7 @@ export default function OrgDashboardPage() {
             <h2 style={h2}>Recent Activity</h2>
             {data.recentEvents.length === 0 && <EmptyState>No recent events yet.</EmptyState>}
             {data.recentEvents.length > 0 && (
-              <div style={{ border: "1px solid #eee", borderRadius: 10, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
                 {data.recentEvents.map((ev) => (
                   <ActivityRow key={ev.id} event={ev} />
                 ))}
@@ -116,8 +126,8 @@ export default function OrgDashboardPage() {
 
 function MetricCard({ label, value }: { label: string; value: number }) {
   return (
-    <Card>
-      <div style={{ fontSize: 12, opacity: 0.7 }}>{label}</div>
+    <Card style={{ padding: 12 }}>
+      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</div>
       <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
     </Card>
   );
@@ -136,12 +146,12 @@ function StatusBars({ data }: { data: Record<string, number> }) {
             <span>{label}</span>
             <strong>{count}</strong>
           </div>
-          <div style={{ height: 10, borderRadius: 999, background: "#f0f0f0", overflow: "hidden" }}>
+          <div style={{ height: 10, borderRadius: 999, background: "var(--surface-muted)", overflow: "hidden" }}>
             <div
               style={{
                 width: `${Math.max((count / max) * 100, count > 0 ? 6 : 0)}%`,
                 height: "100%",
-                background: "#111",
+                background: "var(--brand)",
               }}
             />
           </div>
@@ -153,9 +163,9 @@ function StatusBars({ data }: { data: Record<string, number> }) {
 
 function ActivityRow({ event }: { event: DashboardEvent }) {
   return (
-    <div style={{ padding: 10, borderBottom: "1px solid #f2f2f2" }}>
+    <div style={{ padding: 10, borderBottom: "1px solid var(--border-soft)" }}>
       <div style={{ fontWeight: 600 }}>{event.label}</div>
-      <div style={{ opacity: 0.7, fontSize: 12 }}>
+      <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
         {new Date(event.at).toLocaleString()} - {event.type}
       </div>
     </div>
@@ -172,6 +182,17 @@ const h2: React.CSSProperties = {
   margin: "0 0 10px",
   fontSize: 18,
   fontWeight: 700,
+};
+
+const quickLinkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  padding: "8px 12px",
+  borderRadius: 9999,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontSize: 13,
+  fontWeight: 500,
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
