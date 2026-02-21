@@ -3,11 +3,10 @@ import { expect, test, type Page } from "@playwright/test";
 const API_BASE_URL = process.env.PLAYWRIGHT_API_BASE_URL ?? "http://localhost:5050";
 
 test("invite accept -> member role change happy path", async ({ page }) => {
-  const unique = `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
-  const ownerEmail = `stage14-owner-${unique}@test.com`;
-  const memberEmail = `stage14-member-${unique}@test.com`;
+  const ownerEmail = "stage14-invite-owner@test.com";
+  const memberEmail = "stage14-invite-member@test.com";
   const password = "Pass123!";
-  const orgName = `Stage14 Invite Org ${unique}`;
+  const orgName = "Stage14 Invite Org Primary";
 
   await registerUser(page, ownerEmail, "Owner", password);
   await registerUser(page, memberEmail, "Member", password);
@@ -15,7 +14,7 @@ test("invite accept -> member role change happy path", async ({ page }) => {
   const ownerAuth = await loginAs(page, ownerEmail, password);
   const memberAuth = await loginAs(page, memberEmail, password);
 
-  const orgId = await createOrg(page, ownerAuth, orgName);
+  const orgId = await createOrGetOrg(page, ownerAuth, orgName);
   const inviteToken = await createInvite(page, ownerAuth, orgId, memberEmail, "Member");
   await acceptInvite(page, memberAuth, inviteToken);
 
@@ -32,7 +31,7 @@ async function registerUser(page: Page, email: string, displayName: string, pass
   const res = await page.request.post(`${API_BASE_URL}/auth/register`, {
     data: { email, displayName, password },
   });
-  expect(res.ok()).toBeTruthy();
+  expect([201, 409]).toContain(res.status());
 }
 
 async function loginAs(page: Page, email: string, password: string) {
@@ -56,11 +55,22 @@ async function setBrowserTokens(page: Page, accessToken: string, refreshToken: s
   );
 }
 
-async function createOrg(
+async function createOrGetOrg(
   page: Page,
   auth: { accessToken: string; userId: string },
   name: string,
 ): Promise<string> {
+  const listRes = await page.request.get(`${API_BASE_URL}/orgs`, {
+    headers: authHeaders(auth),
+  });
+  expect(listRes.ok()).toBeTruthy();
+  const existing = ((await listRes.json()) as Array<{ id: string; name: string }>).find(
+    (o) => o.name === name,
+  );
+  if (existing?.id) {
+    return existing.id;
+  }
+
   const res = await page.request.post(`${API_BASE_URL}/orgs`, {
     headers: authHeaders(auth),
     data: { name },
