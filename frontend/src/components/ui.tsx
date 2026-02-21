@@ -7,6 +7,7 @@ const buttonStyles: Record<ButtonVariant, CSSProperties> = {
     border: "1px solid var(--brand)",
     background: "var(--brand)",
     color: "var(--brand-contrast)",
+    boxShadow: "var(--shadow-strong)",
   },
   secondary: {
     border: "1px solid var(--border)",
@@ -23,10 +24,11 @@ const buttonStyles: Record<ButtonVariant, CSSProperties> = {
 export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
     <main
+      className="wf-page-shell"
       style={{
-        maxWidth: wide ? 1120 : 900,
-        margin: "40px auto",
-        padding: 16,
+        maxWidth: wide ? 1160 : 920,
+        margin: "28px auto 42px",
+        padding: "0 18px",
       }}
     >
       {children}
@@ -37,28 +39,35 @@ export function PageShell({ children, wide = false }: { children: ReactNode; wid
 export function PageTitle({ title, subtitle }: { title: string; subtitle?: ReactNode }) {
   return (
     <>
-      <h1 style={{ fontSize: 32, fontWeight: 800, marginBottom: 8 }}>{title}</h1>
-      {subtitle && <div style={{ opacity: 0.75, marginBottom: 16 }}>{subtitle}</div>}
+      <h1 style={{ fontSize: 30, fontWeight: 800, marginBottom: 8, letterSpacing: "-0.02em" }}>{title}</h1>
+      {subtitle && <div style={{ color: "var(--text-muted)", marginBottom: 16 }}>{subtitle}</div>}
     </>
   );
 }
 
 export function Row({ children }: { children: ReactNode }) {
-  return <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>{children}</div>;
+  return (
+    <div className="wf-row" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}>
+      {children}
+    </div>
+  );
 }
 
 export function Card({
   children,
   ...props
 }: { children: ReactNode } & React.HTMLAttributes<HTMLElement>) {
+  const { className, ...rest } = props;
   return (
     <section
-      {...props}
+      {...rest}
+      className={mergeClassNames("wf-card", className)}
       style={{
         border: "1px solid var(--border)",
         background: "var(--surface)",
-        borderRadius: 12,
-        padding: 12,
+        borderRadius: 14,
+        boxShadow: "var(--shadow-soft)",
+        padding: 14,
         ...(props.style ?? {}),
       }}
     >
@@ -69,12 +78,13 @@ export function Card({
 
 export function DataList({ children }: { children: ReactNode }) {
   return (
-    <div
+    <div className="wf-data-list"
       style={{
         marginTop: 16,
         border: "1px solid var(--border)",
         background: "var(--surface)",
-        borderRadius: 12,
+        borderRadius: 14,
+        boxShadow: "var(--shadow-soft)",
         overflow: "hidden",
       }}
     >
@@ -87,9 +97,11 @@ export function DataRow({
   children,
   ...props
 }: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  const { className, ...rest } = props;
   return (
     <div
-      {...props}
+      {...rest}
+      className={mergeClassNames("wf-data-row", className)}
       style={{ padding: 12, borderBottom: "1px solid var(--border-soft)", ...(props.style ?? {}) }}
     >
       {children}
@@ -98,19 +110,44 @@ export function DataRow({
 }
 
 export function Label({ children }: { children: ReactNode }) {
-  return <label style={{ display: "block", marginBottom: 6 }}>{children}</label>;
+  return (
+    <label className="wf-label" style={{ display: "block", marginBottom: 6 }}>
+      {children}
+    </label>
+  );
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} style={{ ...inputStyle, ...props.style }} />;
+  const { className, ...rest } = props;
+  return (
+    <input
+      {...rest}
+      className={mergeClassNames("wf-input", className)}
+      style={{ ...inputStyle, outline: "none", ...props.style }}
+    />
+  );
 }
 
 export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...props} style={{ ...inputStyle, minHeight: 90, resize: "vertical", ...props.style }} />;
+  const { className, ...rest } = props;
+  return (
+    <textarea
+      {...rest}
+      className={mergeClassNames("wf-input", className)}
+      style={{ ...inputStyle, minHeight: 90, resize: "vertical", outline: "none", ...props.style }}
+    />
+  );
 }
 
 export function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} style={{ ...inputStyle, ...props.style }} />;
+  const { className, ...rest } = props;
+  return (
+    <select
+      {...rest}
+      className={mergeClassNames("wf-input", className)}
+      style={{ ...inputStyle, outline: "none", ...props.style }}
+    />
+  );
 }
 
 export function Button({
@@ -121,9 +158,11 @@ export function Button({
   children: ReactNode;
   variant?: ButtonVariant;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const { className, ...rest } = props;
   return (
     <button
-      {...props}
+      {...rest}
+      className={mergeClassNames("wf-btn", `wf-btn-${variant}`, className)}
       style={{
         ...baseButton,
         ...buttonStyles[variant],
@@ -140,9 +179,13 @@ export function ErrorBox({
   children,
   ...props
 }: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  const { className, ...rest } = props;
   return (
     <div
-      {...props}
+      {...rest}
+      className={mergeClassNames("wf-alert", "wf-alert-error", className)}
+      role="alert"
+      aria-live="assertive"
       style={{
         marginTop: 12,
         padding: 12,
@@ -160,9 +203,13 @@ export function SuccessBox({
   children,
   ...props
 }: { children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+  const { className, ...rest } = props;
   return (
     <div
-      {...props}
+      {...rest}
+      className={mergeClassNames("wf-alert", "wf-alert-success", className)}
+      role="status"
+      aria-live="polite"
       style={{
         marginTop: 12,
         padding: 12,
@@ -177,7 +224,11 @@ export function SuccessBox({
 }
 
 export function EmptyState({ children }: { children: ReactNode }) {
-  return <div style={{ color: "var(--text-muted)" }}>{children}</div>;
+  return (
+    <div className="wf-empty" style={{ color: "var(--text-muted)" }}>
+      {children}
+    </div>
+  );
 }
 
 export function Spinner({ size = 16 }: { size?: number }) {
@@ -199,7 +250,7 @@ export function Spinner({ size = 16 }: { size?: number }) {
 
 export function LoadingCard({ label = "Loading..." }: { label?: string }) {
   return (
-    <Card>
+    <Card role="status" aria-live="polite" aria-busy="true">
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <Spinner />
         <span style={{ color: "var(--text-muted)" }}>{label}</span>
@@ -211,14 +262,21 @@ export function LoadingCard({ label = "Loading..." }: { label?: string }) {
 const inputStyle: CSSProperties = {
   width: "100%",
   padding: "10px 12px",
-  borderRadius: 10,
+  borderRadius: 12,
   border: "1px solid var(--border)",
-  background: "var(--surface)",
+  background: "color-mix(in srgb, var(--surface) 95%, var(--brand-soft) 5%)",
   color: "var(--foreground)",
 };
 
 const baseButton: CSSProperties = {
   padding: "10px 14px",
-  borderRadius: 10,
+  borderRadius: 12,
+  fontWeight: 600,
+  transition: "transform 120ms ease, box-shadow 160ms ease, opacity 120ms ease",
   cursor: "pointer",
 };
+
+function mergeClassNames(...parts: Array<string | undefined>): string | undefined {
+  const value = parts.filter(Boolean).join(" ").trim();
+  return value.length > 0 ? value : undefined;
+}

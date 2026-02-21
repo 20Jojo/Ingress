@@ -49,6 +49,21 @@ Notes:
 - Starts/reuses the frontend dev server automatically.
 - Requires backend API and dependent services to be running.
 
+## Accessibility Audit (Stage 15)
+
+```bash
+npx playwright install
+npm run e2e:a11y
+```
+
+What it does:
+- Runs `axe-core` WCAG A/AA checks via Playwright on:
+  - `/`
+  - `/auth`
+  - `/ping`
+  - `/orgs`
+- Fails the test run if any violations are detected.
+
 ## Core Routes
 
 - `/ping`
@@ -68,3 +83,9 @@ Notes:
 ## Smoke Validation
 
 Use `frontend/docs/stage11.5-smoke-checklist.md` after starting backend + frontend.
+
+## Command Reference
+
+For the full list of frontend commands and what each does, see:
+
+- `frontend/docs/command-reference.md`

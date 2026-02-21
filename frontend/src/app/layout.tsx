@@ -16,10 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <ToastProvider>
-          <TopNav />
-          {children}
-        </ToastProvider>
+        <div className="app-shell">
+          <ToastProvider>
+            <TopNav />
+            <div className="app-main">{children}</div>
+          </ToastProvider>
+        </div>
       </body>
     </html>
   );

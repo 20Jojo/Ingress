@@ -1,5 +1,10 @@
 # WorkflowPlatform Runbook
 
+## Command References
+- Master index: `docs/command-index.md`
+- Frontend: `frontend/docs/command-reference.md`
+- Backend: `docs/backend-command-reference.md`
+
 ## Start / Stop
 ```powershell
 docker compose up -d --build    # build images + start all services

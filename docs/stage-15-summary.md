@@ -1,53 +1,15 @@
-# Stage 15 Summary (Prod Readiness)
+# Stage 15 Summary (Prod Readiness + UX Hardening)
 
-## Status
-- Stage 15: implemented
+Stage 15 was completed with a strong focus on production readiness, design consistency, accessibility, and operational clarity. The backend side continued the hardening and observability direction by keeping the security-header middleware in place and instrumenting realtime activity through metrics that now make connection lifecycles, org join events, and broadcast volume visible. This work matters because it turns previously opaque runtime behavior into measurable signals that can be monitored and alerted on, which is essential once traffic and concurrent usage increase.
 
-## Scope
-- Security hardening pass
-- Realtime observability pass
-- Environment/deploy runbook pass
+A large portion of this stage was dedicated to frontend quality at a systems level rather than one-off page tweaks. The UI was moved to a clean modern enterprise style with a subtle brand accent, using shared design tokens for color, spacing, borders, shadows, and typography so the interface feels cohesive across auth, org, members, projects, tasks, and dashboard flows. The significance is that design decisions are now centralized and repeatable: pages inherit a stable visual language, and future features can follow the same patterns without re-inventing styling each time.
 
-## Implemented
+After the visual foundation, we applied page-level rhythm and interaction improvements so the product is not only consistent but also easier to use. This included clearer action grouping, cleaner hierarchy in cards and metadata blocks, and responsive behavior that makes controls and layouts hold up on smaller screens. We also added purposeful micro-interactions in shared components (hover, focus, active, motion behavior) so the product feels responsive and intentional without becoming noisy. The benefit is improved usability and scanability, especially in workflow-heavy screens where speed and clarity are critical.
 
-### Security
-- Added API security response headers middleware:
-  - `src/Workflow.Api/Middleware/SecurityHeadersMiddleware.cs`
-- Wired middleware into pipeline:
-  - `src/Workflow.Api/Program.cs`
-- Headers applied:
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
-  - `Cross-Origin-Opener-Policy: same-origin`
-  - `Strict-Transport-Security` (non-development only)
+Accessibility was treated as a first-class quality gate in this stage. We added semantic improvements across shared components and forms, including proper live regions for toast and status messaging, explicit form control labeling where placeholders previously carried too much semantic load, visible keyboard focus states, reduced-motion handling, and correct navigation semantics such as `aria-current` on active routes. Beyond remediations, we added an automated axe-based audit test suite and command so accessibility checks are now repeatable and enforceable, not manual and subjective. The result is that accessibility regressions can be detected early and blocked before release.
 
-### Observability (Realtime)
-- Added realtime metrics instrumentation:
-  - `src/Workflow.Api/Realtime/RealtimeMetrics.cs`
-- Hooked realtime connection/join events:
-  - `src/Workflow.Api/Hubs/OrgEventsHub.cs`
-- Hooked realtime broadcast event counting:
-  - `src/Workflow.Api/Realtime/OrgRealtimeBroadcaster.cs`
-- Metrics emitted:
-  - `realtime_connections_active`
-  - `realtime_connection_events_total`
-  - `realtime_join_events_total`
-  - `realtime_broadcast_events_total`
+On the test and data hygiene side, we addressed the repeated accumulation of `stage14-*` entities in the development database by changing E2E specs to use stable identities and idempotent setup paths instead of creating new timestamp-based users and organizations on every run. We also added a cleanup SQL script for existing test residue. This is significant because it prevents database drift in local/dev environments, keeps test data understandable, and reduces false signals during troubleshooting.
 
-### Ops/Runbook
-- Added production readiness checklist and environment matrix:
-  - `docs/stage-15-summary.md`
-  - `RUNBOOK.md` (updated with Stage 15 checklist section)
+Documentation was expanded substantially so operational knowledge is no longer fragmented. We added a frontend command reference, a backend command reference, an accessibility audit report, and a master docs index that links runbook, command references, architecture notes, and stage summaries from one place. We also linked these references from the runbook and README surfaces so they are discoverable during normal development. The significance is maintainability: new contributors and future-you can run, verify, test, audit, and troubleshoot with fewer assumptions and less tribal knowledge.
 
-## Verification
-- Frontend quality gate:
-  - `cd frontend && npm run verify` (passes)
-- Backend build/test should be run locally:
-  1. `dotnet build src/Workflow.Api/Workflow.Api.csproj`
-  2. `dotnet test Workflow.Api.IntegrationTests/Workflow.Api.IntegrationTests.csproj`
-
-## Notes
-- Existing Stage 14 tests remain the primary regression safety net.
-- Stage 15 adds production guardrails and runtime visibility, not new user-facing features.
+In practical terms, Stage 15 now leaves the project in a much stronger state: the backend is safer and more observable, the frontend is visually coherent and more usable, accessibility has both fixes and automated enforcement, test flows are cleaner and less polluting, and the command/documentation surface is comprehensive enough to support consistent day-to-day execution.

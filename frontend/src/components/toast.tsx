@@ -32,9 +32,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div style={stackStyle}>
+      <div style={stackStyle} aria-live="polite" aria-atomic="false">
         {toasts.map((toast) => (
-          <div key={toast.id} style={{ ...toastStyle, ...toastTone[toast.type] }}>
+          <div
+            key={toast.id}
+            style={{ ...toastStyle, ...toastTone[toast.type] }}
+            role={toast.type === "error" ? "alert" : "status"}
+            aria-live={toast.type === "error" ? "assertive" : "polite"}
+          >
             {toast.message}
           </div>
         ))}

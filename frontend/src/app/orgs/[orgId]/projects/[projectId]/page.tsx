@@ -47,26 +47,32 @@ export default function ProjectDetailPage() {
   return (
     <PageShell>
       <Row>
-        <Link href={`/orgs/${orgId}/projects`}>Back to projects</Link>
+        <Link href={`/orgs/${orgId}/projects`} style={quickLinkStyle}>
+          Back to projects
+        </Link>
       </Row>
 
-      <PageTitle title={project?.name || "Project"} subtitle={<span>Org: {orgId}</span>} />
+      <PageTitle title={project?.name || "Project"} subtitle={<span>Overview for project {projectId}</span>} />
 
-      <Row>
-        <Button onClick={() => void load()} variant="secondary">
-          Reload
-        </Button>
-        <Link href={`/orgs/${orgId}/projects/${projectId}/tasks`}>Open Tasks</Link>
-      </Row>
+      <Card style={{ marginBottom: 12 }}>
+        <Row>
+          <Button onClick={() => void load()} variant="secondary">
+            Reload
+          </Button>
+          <Link href={`/orgs/${orgId}/projects/${projectId}/tasks`} style={quickLinkStyle}>
+            Open tasks
+          </Link>
+        </Row>
+      </Card>
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
       {project && (
         <Card>
-          <div style={{ fontWeight: 700, marginBottom: 6 }}>Project Summary</div>
-          <div>Name: {project.name || "-"}</div>
-          <div>Organization ID: {project.organizationId || "-"}</div>
-          <div>Project ID: {project.id || "-"}</div>
+          <div style={{ fontWeight: 700, marginBottom: 10 }}>Project Summary</div>
+          <div style={metaRowStyle}>Name: {project.name || "-"}</div>
+          <div style={metaRowStyle}>Organization ID: {project.organizationId || "-"}</div>
+          <div style={metaRowStyle}>Project ID: {project.id || "-"}</div>
         </Card>
       )}
     </PageShell>
@@ -77,3 +83,20 @@ function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
+
+const quickLinkStyle: React.CSSProperties = {
+  textDecoration: "none",
+  padding: "8px 12px",
+  borderRadius: 9999,
+  border: "1px solid var(--border)",
+  background: "var(--surface)",
+  color: "var(--foreground)",
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const metaRowStyle: React.CSSProperties = {
+  color: "var(--text-muted)",
+  marginBottom: 6,
+  fontSize: 14,
+};
