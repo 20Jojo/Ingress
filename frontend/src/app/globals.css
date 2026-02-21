@@ -1,29 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7fb;
-  --foreground: #0f172a;
+  --background: #f5f6f8;
+  --foreground: #1e2a3a;
   --surface: #ffffff;
-  --surface-muted: #eef2ff;
-  --border: #d8e1ee;
-  --border-soft: #ebf0f7;
-  --text-muted: #5c6b85;
-  --brand: #2563eb;
+  --surface-muted: #eef2f8;
+  --border: #d5dbe6;
+  --border-soft: #e9edf3;
+  --text-muted: #5e6b78;
+  --brand: #2f4e85;
   --brand-contrast: #ffffff;
-  --brand-soft: #e8f0ff;
+  --brand-soft: #d9e3f3;
+  --accent: #f07a1a;
+  --accent-strong: #d66510;
+  --accent-contrast: #ffffff;
   --danger: #c62828;
   --danger-border: #ef9a9a;
   --ok-border: #9cd3b0;
   --error-border: #f7b7b7;
-  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06), 0 6px 16px rgba(15, 23, 42, 0.04);
-  --shadow-strong: 0 8px 28px rgba(37, 99, 235, 0.16);
+  --shadow-soft: 0 1px 2px rgba(30, 42, 58, 0.06), 0 6px 16px rgba(30, 42, 58, 0.04);
+  --shadow-strong: 0 8px 24px rgba(47, 78, 133, 0.16);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "IBM Plex Sans", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", "Cascadia Mono", "Consolas", monospace;
+  --font-sans: "Inter", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -142,6 +145,12 @@ a:focus-visible {
   transform: translateY(-1px);
 }
 
+.wf-btn-primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
 .wf-btn:active:not(:disabled) {
   transform: translateY(0);
 }
@@ -184,7 +193,7 @@ a:focus-visible {
 }
 
 .wf-nav-link-active:hover {
-  box-shadow: var(--shadow-strong);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 42%, transparent);
 }
 
 .wf-status-pill {
