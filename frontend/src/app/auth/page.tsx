@@ -217,7 +217,7 @@ const panelCard: React.CSSProperties = {
 };
 
 const authPrimaryButtonStyle: React.CSSProperties = {
-  padding: "8px 12px",
+  padding: "6px 10px",
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
