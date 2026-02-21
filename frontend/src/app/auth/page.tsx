@@ -126,7 +126,7 @@ export default function AuthPage() {
             />
           </div>
 
-          <Button data-testid="auth-register-submit" onClick={onRegister}>
+          <Button data-testid="auth-register-submit" onClick={onRegister} style={authPrimaryButtonStyle}>
             Register
           </Button>
         </Card>
@@ -153,7 +153,7 @@ export default function AuthPage() {
             />
           </div>
 
-          <Button data-testid="auth-login-submit" onClick={onLogin}>
+          <Button data-testid="auth-login-submit" onClick={onLogin} style={authPrimaryButtonStyle}>
             Login
           </Button>
 
@@ -214,6 +214,10 @@ const panelGrid: React.CSSProperties = {
 
 const panelCard: React.CSSProperties = {
   minHeight: 300,
+};
+
+const authPrimaryButtonStyle: React.CSSProperties = {
+  padding: "8px 12px",
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {

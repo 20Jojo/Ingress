@@ -44,10 +44,9 @@ export default function TopNav() {
 }
 
 const headerStyle: React.CSSProperties = {
-  borderBottom: "1px solid var(--border)",
-  background: "color-mix(in srgb, var(--surface) 90%, var(--brand-soft) 10%)",
+  borderBottom: "1px solid color-mix(in srgb, var(--brand) 72%, black 28%)",
+  background: "var(--brand)",
   boxShadow: "var(--shadow-soft)",
-  backdropFilter: "saturate(130%) blur(5px)",
   position: "sticky",
   top: 0,
   zIndex: 20,
@@ -68,6 +67,7 @@ const brandStyle: React.CSSProperties = {
   letterSpacing: "0.01em",
   marginRight: 8,
   padding: "6px 2px",
+  color: "var(--brand-contrast)",
 };
 
 const statusWrapStyle: React.CSSProperties = {
@@ -75,10 +75,10 @@ const statusWrapStyle: React.CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: 6,
-  border: "1px solid var(--border)",
+  border: "1px solid color-mix(in srgb, var(--brand-contrast) 22%, transparent)",
   borderRadius: 9999,
   padding: "6px 10px",
-  background: "color-mix(in srgb, var(--surface) 94%, var(--brand-soft) 6%)",
+  background: "color-mix(in srgb, var(--brand) 80%, black 20%)",
 };
 
 const statusDotStyle: React.CSSProperties = {
@@ -90,7 +90,7 @@ const statusDotStyle: React.CSSProperties = {
 
 const statusTextStyle: React.CSSProperties = {
   fontSize: 12,
-  color: "var(--text-muted)",
+  color: "color-mix(in srgb, var(--brand-contrast) 82%, transparent)",
 };
 
 const statusTone: Record<string, React.CSSProperties> = {
@@ -102,24 +102,24 @@ const statusTone: Record<string, React.CSSProperties> = {
 };
 
 const linkStyle: React.CSSProperties = {
-  color: "var(--foreground)",
+  color: "var(--brand-contrast)",
   textDecoration: "none",
   borderWidth: 1,
   borderStyle: "solid",
-  borderColor: "var(--border)",
+  borderColor: "color-mix(in srgb, var(--brand-contrast) 22%, transparent)",
   borderRadius: 9999,
   padding: "6px 12px",
   fontSize: 13,
   fontWeight: 500,
-  background: "var(--surface)",
+  background: "transparent",
 };
 
 const activeLinkStyle: React.CSSProperties = {
   ...linkStyle,
-  background: "var(--brand)",
-  color: "var(--brand-contrast)",
+  background: "var(--accent)",
+  color: "var(--accent-contrast)",
   borderWidth: 1,
   borderStyle: "solid",
-  borderColor: "var(--brand)",
-  boxShadow: "var(--shadow-strong)",
+  borderColor: "var(--accent)",
+  boxShadow: "0 6px 18px color-mix(in srgb, var(--accent) 34%, transparent)",
 };

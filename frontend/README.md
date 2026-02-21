@@ -89,3 +89,7 @@ Use `frontend/docs/stage11.5-smoke-checklist.md` after starting backend + fronte
 For the full list of frontend commands and what each does, see:
 
 - `frontend/docs/command-reference.md`
+
+## UI Design Spec
+
+- Enterprise design system and rationale: `frontend/docs/enterprise-ui-design-spec.md`

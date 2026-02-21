@@ -4,10 +4,10 @@ type ButtonVariant = "primary" | "secondary" | "danger";
 
 const buttonStyles: Record<ButtonVariant, CSSProperties> = {
   primary: {
-    border: "1px solid var(--brand)",
-    background: "var(--brand)",
-    color: "var(--brand-contrast)",
-    boxShadow: "var(--shadow-strong)",
+    border: "1px solid var(--accent)",
+    background: "var(--accent)",
+    color: "var(--accent-contrast)",
+    boxShadow: "0 8px 20px color-mix(in srgb, var(--accent) 36%, transparent)",
   },
   secondary: {
     border: "1px solid var(--border)",
