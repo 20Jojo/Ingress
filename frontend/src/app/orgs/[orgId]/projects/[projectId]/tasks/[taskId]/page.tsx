@@ -209,7 +209,7 @@ export default function TaskDetailPage() {
               aria-label="Task description"
               style={{ marginTop: 10 }}
             />
-            <Button onClick={onSaveDetails} disabled={busy} style={{ marginTop: 10 }}>
+            <Button onClick={onSaveDetails} disabled={busy} style={{ ...compactActionButtonStyle, marginTop: 10 }}>
               Save Details
             </Button>
           </Card>
@@ -226,10 +226,15 @@ export default function TaskDetailPage() {
               aria-label="Task due date"
             />
             <Row>
-              <Button onClick={onSaveDueDate} disabled={busy}>
+              <Button onClick={onSaveDueDate} disabled={busy} style={compactActionButtonStyle}>
                 Save Due Date
               </Button>
-              <Button onClick={onClearDueDate} disabled={busy} variant="secondary">
+              <Button
+                onClick={onClearDueDate}
+                disabled={busy}
+                variant="secondary"
+                style={compactActionButtonStyle}
+              >
                 Clear Due Date
               </Button>
             </Row>
@@ -280,6 +285,10 @@ const metaRow: React.CSSProperties = {
   color: "var(--text-muted)",
   marginBottom: 6,
   fontSize: 14,
+};
+
+const compactActionButtonStyle: React.CSSProperties = {
+  padding: "8px 12px",
 };
 
 function getErrorMessage(error: unknown, fallback: string): string {
