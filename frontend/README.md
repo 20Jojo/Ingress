@@ -1,6 +1,6 @@
-# Workflow Platform Frontend
+# Ingress — Frontend
 
-Next.js frontend for auth, organizations, invitations, member management, projects, tasks, dashboard, and realtime updates.
+The Ingress web application (Next.js): authentication, organizations, invitations, member management, projects, tasks, dashboard and realtime updates. See the [root README](../README.md) for the full project overview.
 
 ## Prerequisites
 
