@@ -1,22 +1,30 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { isLoggedIn } from "@/lib/auth";
 import { createOrg, listOrgs, type OrgDto } from "@/lib/orgsApi";
 import { useToast } from "@/components/toast";
+import { Avatar } from "@/components/graphics";
+import { IconArrowRight, IconBuilding, IconPlus, IconRefresh } from "@/components/icons";
 import {
   Button,
+  ButtonLink,
   Card,
-  DataList,
-  DataRow,
   EmptyState,
   ErrorBox,
+  InfoBox,
   Input,
   LoadingCard,
+  Mono,
+  PageHeader,
   PageShell,
-  PageTitle,
-  Row,
+  Section,
+  Table,
+  Td,
+  Th,
+  THead,
+  TextLink,
+  Tr,
 } from "@/components/ui";
 
 export default function OrgsPage() {
@@ -33,14 +41,14 @@ export default function OrgsPage() {
       setOrgs(null);
     }
     try {
-      const list = await listOrgs();
-      setOrgs(list);
+      setOrgs(await listOrgs());
     } catch (e: unknown) {
       setError(getErrorMessage(e, "Failed to load orgs"));
     }
   }
 
-  async function onCreate() {
+  async function onCreate(e?: FormEvent) {
+    e?.preventDefault();
     setError("");
     if (!name.trim()) return setError("Organization name is required.");
     setBusy(true);
@@ -49,8 +57,8 @@ export default function OrgsPage() {
       setName("");
       push("Organization created", "success");
       await load(true);
-    } catch (e: unknown) {
-      const message = getErrorMessage(e, "Failed to create org");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Failed to create org");
       setError(message);
       push(message, "error");
     } finally {
@@ -64,69 +72,95 @@ export default function OrgsPage() {
   }, []);
 
   return (
-    <PageShell wide>
-      <PageTitle
+    <PageShell>
+      <PageHeader
         title="Organizations"
-        subtitle="Create and manage workspaces with role-based access."
+        description="Each organization is an isolated workspace with its own members, projects and permissions."
+        actions={
+          <Button onClick={() => void load(true)} variant="secondary">
+            <IconRefresh size={16} /> Reload
+          </Button>
+        }
       />
 
-      <Card style={{ marginBottom: 12 }}>
-        <Row>
-          <div style={statusTextStyle}>
-            Logged in: <strong>{loggedIn === null ? "Checking..." : loggedIn ? "Yes" : "No"}</strong>
-          </div>
-          <Link href="/auth" style={quickLinkStyle}>
-            Auth
-          </Link>
-          <Link href="/users" style={quickLinkStyle}>
-            Users
-          </Link>
-        </Row>
-      </Card>
-
-      <Card style={{ marginBottom: 12 }}>
-        <Row>
-          <Input
-            data-testid="org-create-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="New organization name"
-            aria-label="Organization name"
-          />
-          <Button data-testid="org-create-submit" onClick={onCreate} disabled={busy}>
-            {busy ? "Creating..." : "Create"}
-          </Button>
-          <Button onClick={() => void load(true)} variant="secondary">
-            Reload {orgs === null ? <span style={{ marginLeft: 4 }}>...</span> : ""}
-          </Button>
-        </Row>
-      </Card>
-
-      {error && <ErrorBox>{error}</ErrorBox>}
-      {orgs === null && <LoadingCard label="Loading organizations..." />}
-
-      {orgs && orgs.length > 0 && (
-        <DataList>
-          <DataRow>
-            <strong>{orgs.length} organization(s)</strong>
-          </DataRow>
-          {orgs.map((o) => (
-            <DataRow key={o.id} data-testid={`org-row-${o.id}`}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div>
-                  <strong>{o.name}</strong>
-                  <div style={orgIdStyle}>{o.id}</div>
-                </div>
-                <Link data-testid={`org-open-${o.id}`} href={`/orgs/${o.id}`} style={quickLinkStyle}>
-                  Open
-                </Link>
-              </div>
-            </DataRow>
-          ))}
-        </DataList>
+      {loggedIn === false && (
+        <InfoBox>
+          You&apos;re not signed in, so organizations can&apos;t be loaded. <TextLink href="/auth">Sign in</TextLink> to continue.
+        </InfoBox>
       )}
 
-      {orgs && orgs.length === 0 && <EmptyState>No organizations yet.</EmptyState>}
+      <Section title="Create an organization" id="create-org">
+        <Card>
+          <form onSubmit={onCreate} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label htmlFor="org-name" className="mb-1.5 block text-[13px] font-medium text-fg-secondary">
+                Organization name
+              </label>
+              <Input
+                id="org-name"
+                data-testid="org-create-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Acme Corporation"
+                aria-label="Organization name"
+              />
+            </div>
+            <Button data-testid="org-create-submit" type="submit" disabled={busy}>
+              <IconPlus size={16} /> {busy ? "Creating..." : "Create"}
+            </Button>
+          </form>
+        </Card>
+      </Section>
+
+      {error && <ErrorBox>{error}</ErrorBox>}
+
+      <Section
+        title="Your organizations"
+        description={orgs ? `${orgs.length} organization${orgs.length === 1 ? "" : "s"}` : undefined}
+        id="org-list"
+      >
+        {orgs === null && !error && <LoadingCard label="Loading organizations..." />}
+
+        {orgs && orgs.length === 0 && (
+          <EmptyState
+            icon={<IconBuilding size={20} />}
+            title="No organizations yet"
+            description="Create your first organization above, or accept an invitation to join an existing one."
+          />
+        )}
+
+        {orgs && orgs.length > 0 && (
+          <Table caption="Organizations">
+            <THead>
+              <Th>Organization</Th>
+              <Th className="hidden md:table-cell">Identifier</Th>
+              <Th align="right">
+                <span className="sr-only">Actions</span>
+              </Th>
+            </THead>
+            <tbody>
+              {orgs.map((o) => (
+                <Tr key={o.id} data-testid={`org-row-${o.id}`}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <Avatar seed={o.id} label={o.name} size={34} shape="square" />
+                      <span className="font-medium text-fg">{o.name}</span>
+                    </div>
+                  </Td>
+                  <Td className="hidden md:table-cell">
+                    <Mono>{o.id}</Mono>
+                  </Td>
+                  <Td align="right">
+                    <ButtonLink data-testid={`org-open-${o.id}`} href={`/orgs/${o.id}`} size="sm">
+                      Open <IconArrowRight size={14} />
+                    </ButtonLink>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Section>
     </PageShell>
   );
 }
@@ -135,24 +169,3 @@ function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
   return fallback;
 }
-
-const quickLinkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  padding: "8px 12px",
-  borderRadius: 9999,
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  color: "var(--foreground)",
-  fontSize: 13,
-  fontWeight: 500,
-};
-
-const statusTextStyle: React.CSSProperties = {
-  color: "var(--text-muted)",
-  marginRight: 2,
-};
-
-const orgIdStyle: React.CSSProperties = {
-  color: "var(--text-muted)",
-  fontSize: 12,
-};

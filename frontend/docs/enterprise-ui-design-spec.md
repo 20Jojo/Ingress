@@ -1,51 +1,71 @@
-# Enterprise UI Design Spec
+# Ingress Design System
 
-This project uses a **modern enterprise SaaS design language** optimized for trust, readability, and operational clarity.
+Ingress is an enterprise workflow management platform. Its visual language translates the atmosphere of clear tropical water — turquoise, cyan, aqua and white — into a calm, precise software interface. It is professional first: no illustrations, mascots or decorative clutter. The interface itself carries the visual appeal.
 
-## Design Direction
+## Principles
 
-The interface is intentionally professional and structured: calm color contrast, strong typography hierarchy, and consistent card-based sections. The visual goal is to support workflow speed and confidence rather than decorative styling.
+1. **Clarity over decoration.** Every element earns its place. Imagery is limited to the brand mark and one subtle contour-line texture on brand surfaces.
+2. **One system, everywhere.** Pages compose shared components from `src/components/ui.tsx`. Pages never invent their own colours, radii or shadows.
+3. **Predictable structure.** Every in-app page follows the same skeleton (see Layout).
+4. **Calm colour.** White and cool off-white surfaces dominate; turquoise is used for action and emphasis, deep ocean blue for depth.
 
-## Core Color System
+## Colour tokens (`src/app/globals.css`)
 
-- Primary corporate blue: `#2F4E85`
-- Background off-white: `#F5F6F8`
-- Surface white: `#FFFFFF`
-- Accent action orange: `#F28C38`
-- Heading text: `#1E2A3A`
-- Body text muted: `#5E6B78`
+| Token | Value | Use |
+| --- | --- | --- |
+| `brand-500` | `#20C5C7` | Signature turquoise: focus rings, active indicators |
+| `brand-400` | `#48DDE0` | Caribbean cyan: gradients, highlights |
+| `brand-100` | `#DDF8F5` | Soft aqua: tinted backgrounds |
+| `brand-700` | `#0C7F88` | Primary buttons and links (AA contrast with white) |
+| `ocean-700` | `#075985` | Deep ocean blue: depth, Owner role, "To do" status |
+| `canvas` | `#F5FAFA` | App background |
+| `surface` | `#FFFFFF` | Cards, tables, sidebar |
+| `line` / `line-strong` | `#E2EBED` / `#CAD9DC` | Borders and dividers |
+| `fg` / `fg-muted` | `#0F2A37` / `#64748B` | Text and secondary text |
+| `success` / `warning` / `danger` | green / amber / rose scales | Status only, always muted |
 
-Token mapping is implemented in:
-- `frontend/src/app/globals.css`
-
-## Visual Behavior
-
-- Blue communicates structure (top bar, navigation identity, system framing).
-- Light surfaces create breathing room for dense data sections.
-- Orange is reserved for primary calls to action.
-- Shadows are subtle and soft; no heavy gradients or glossy effects.
-
-## Layout Principles
-
-- Card-based content blocks with small radius and light elevation.
-- Reusable row/action composition through shared UI components.
-- Alternating section emphasis via surface and border contrast.
-- Responsive behavior prioritizes readability and control accessibility on smaller screens.
+Avoid: purple, neon, heavy black or navy backgrounds, saturated fills, large gradients. Gradients appear only in the logo mark, the auth brand panel (`.ing-depth`) and the light aqua wash (`.ing-water`).
 
 ## Typography
 
-- Sans stack centered on `Inter` for clean enterprise readability.
-- Strong heading hierarchy, muted metadata text, generous line-height.
+- **Plus Jakarta Sans** — headings and display numbers (`font-display`), weight 600.
+- **Inter** — all UI and body text (`font-sans`), base 14px.
+- **JetBrains Mono** — identifiers and tokens (`font-mono`), 12px.
 
-## Components and Interaction
+Hierarchy: page title 28px / section title 16px / card title 15px / body 14px / labels 13px / metadata 12–12.5px. Uppercase eyebrow labels use 11–12px with 0.08em tracking.
 
-Shared components in `frontend/src/components/ui.tsx` and nav in `frontend/src/components/top-nav.tsx` implement:
+## Shape and elevation
 
-- Focus-visible states for keyboard navigation
-- Hover/active transitions with low motion intensity
-- Reduced-motion fallback support
-- Consistent button/input/card semantics across all pages
+- Radius: controls 8px (`rounded-lg`), cards and tables 12px (`rounded-xl`), dialogs 16px.
+- Borders: 1px `line`. No thick outlines.
+- Shadows: `shadow-xs` for resting surfaces, `shadow-md` on hover, `shadow-lg` for dialogs and toasts only.
 
-## Why this matters
+## Layout
 
-This design system keeps the app consistent as features grow. New pages can be composed from shared tokens and UI primitives without style drift, and the product keeps a trustworthy enterprise identity aligned with the backend’s RBAC/security/observability posture.
+- **App shell** (`app-shell.tsx`): fixed 264px white sidebar + sticky top bar with breadcrumbs and realtime status. Authentication routes (`/auth`, `/register`, `/invite/accept`) render without the shell using `AuthLayout`.
+- **Sidebar groups**: *General* (Home, Organizations, People), *Workspace* (shown inside an org: Overview, Dashboard, Projects, Members, Invitations, with an organization switcher), *System* (API status, Accept invitation). Session status and sign-out sit at the bottom.
+- **Page skeleton**: `PageShell` (max 1200px, consistent gutters) → `PageHeader` (title, one-line description, actions on the right, bottom divider) → one or more `Section`s (16px title, optional description and actions) with 40px spacing between them.
+
+## Components (`src/components`)
+
+| Component | Notes |
+| --- | --- |
+| `Button`, `ButtonLink` | `primary`, `secondary`, `ghost`, `danger`, `danger-ghost`, `danger-solid`; sizes `sm` / `md` / `lg` |
+| `Input`, `Select`, `TextArea`, `Field`, `Label` | 40px controls, turquoise focus ring |
+| `Card`, `CardHeader` | White surface, optional tinted icon tile |
+| `Table`, `THead`, `Th`, `Tr`, `Td` | Primary way to present collections |
+| `StatCard` | Dashboard metrics |
+| `Badge`, `StatusBadge`, `RoleBadge` | Status: To do = ocean, In progress = amber, Done = green. Roles: Owner = ocean, Admin = turquoise, Member = neutral |
+| `ErrorBox`, `SuccessBox`, `InfoBox` | Inline alerts with icon |
+| `EmptyState`, `LoadingCard`, `Skeleton`, `Spinner` | Empty and loading states — icon only, never illustrations |
+| `Dialog`, `ConfirmDialog` (`dialog.tsx`) | Portal-rendered, focus-trapped, Escape to close |
+| Toasts (`toast.tsx`) | Bottom-right, titled, dismissible |
+| `IngressMark`, `IngressLogo`, `Avatar`, `ContourLines` (`graphics.tsx`) | Brand assets and initials avatars |
+| Icons (`icons.tsx`) | 24px grid, 1.75px stroke line icons |
+
+## Accessibility
+
+- Text meets WCAG AA contrast; primary actions use `brand-700`.
+- Visible focus rings on every interactive element.
+- Dialogs trap focus and restore it on close; the mobile navigation drawer closes on Escape.
+- `prefers-reduced-motion` disables animation.

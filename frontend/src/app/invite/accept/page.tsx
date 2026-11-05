@@ -2,24 +2,34 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type FormEvent } from "react";
 import { getAccessToken } from "@/lib/auth";
 import { acceptInvite } from "@/lib/invitesApi";
-import {
-  Button,
-  ErrorBox,
-  Input,
-  PageShell,
-  PageTitle,
-  Row,
-  SuccessBox,
-} from "@/components/ui";
+import { AuthHeading, AuthLayout } from "@/components/auth-layout";
+import { IconArrowRight, IconTicket } from "@/components/icons";
+import { Button, ButtonLink, ErrorBox, Field, Input, Spinner, SuccessBox } from "@/components/ui";
 
 export default function AcceptInvitePage() {
   return (
-    <Suspense fallback={<AcceptInviteFallback />}>
-      <AcceptInviteContent />
-    </Suspense>
+    <AuthLayout>
+      <Suspense fallback={<AcceptInviteFallback />}>
+        <AcceptInviteContent />
+      </Suspense>
+    </AuthLayout>
+  );
+}
+
+function Heading() {
+  return (
+    <>
+      <span className="mb-6 grid h-11 w-11 place-items-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-200" aria-hidden>
+        <IconTicket size={22} />
+      </span>
+      <AuthHeading
+        title="Accept Invitation"
+        description="Paste the invitation token you received to join the organization. You need to be signed in as the invited user."
+      />
+    </>
   );
 }
 
@@ -37,7 +47,8 @@ function AcceptInviteContent() {
     }
   }, [searchParams]);
 
-  async function onAccept() {
+  async function onAccept(e?: FormEvent) {
+    e?.preventDefault();
     setError("");
     setResultText("");
     const trimmed = token.trim();
@@ -55,57 +66,74 @@ function AcceptInviteContent() {
     try {
       const res = await acceptInvite(trimmed);
       setResultText(JSON.stringify(res, null, 2));
-    } catch (e: unknown) {
-      setError(getErrorMessage(e, "Failed to accept invitation"));
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to accept invitation"));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <PageShell>
-      <PageTitle title="Accept Invitation" />
-
-      <Row>
-        <Link href="/auth">Login</Link>
-        <Link href="/orgs">Orgs</Link>
-      </Row>
-
-      <Row>
-        <Input
-          data-testid="accept-token"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-          placeholder="Paste invitation token"
-          style={{ flex: 1 }}
-        />
-        <Button data-testid="accept-submit" onClick={onAccept} disabled={busy}>
-          {busy ? "Accepting..." : "Accept"}
+    <>
+      <Heading />
+      <form onSubmit={onAccept} className="grid gap-5">
+        <Field label="Invitation token" htmlFor="accept-token">
+          <Input
+            id="accept-token"
+            data-testid="accept-token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="inv_…"
+            className="h-11 font-mono text-[13px]"
+            autoComplete="off"
+          />
+        </Field>
+        <Button data-testid="accept-submit" type="submit" size="lg" disabled={busy} className="w-full">
+          {busy ? <Spinner className="border-white/40 border-t-white" /> : null}
+          {busy ? "Accepting…" : "Accept invitation"}
         </Button>
-      </Row>
+      </form>
 
       {error && <ErrorBox data-testid="accept-error">{error}</ErrorBox>}
 
       {resultText && (
-        <SuccessBox data-testid="accept-success">
-          <div style={{ fontWeight: 700, marginBottom: 8 }}>Accepted</div>
-          <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>{resultText}</pre>
-        </SuccessBox>
+        <>
+          <SuccessBox data-testid="accept-success">
+            <div className="font-medium">Accepted — you&apos;re now a member of the organization.</div>
+            <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-md bg-white/70 p-2.5 text-[11.5px] text-fg-secondary">
+              {resultText}
+            </pre>
+          </SuccessBox>
+          <ButtonLink href="/orgs" variant="secondary" className="w-full">
+            Go to organizations <IconArrowRight size={16} />
+          </ButtonLink>
+        </>
       )}
-    </PageShell>
+
+      <p className="mt-8 text-center text-[13.5px] text-fg-muted">
+        Not signed in?{" "}
+        <Link href="/auth" className="font-medium text-brand-700 hover:text-brand-800 hover:underline">
+          Sign in first
+        </Link>
+        <span aria-hidden className="mx-2 text-fg-subtle">
+          ·
+        </span>
+        <Link href="/orgs" className="font-medium text-brand-700 hover:text-brand-800 hover:underline">
+          Organizations
+        </Link>
+      </p>
+    </>
   );
 }
 
 function AcceptInviteFallback() {
   return (
-    <PageShell>
-      <PageTitle title="Accept Invitation" />
-      <Row>
-        <Link href="/auth">Login</Link>
-        <Link href="/orgs">Orgs</Link>
-      </Row>
-      <div>Loading invite form...</div>
-    </PageShell>
+    <>
+      <Heading />
+      <div className="flex items-center gap-3 text-fg-muted" role="status">
+        <Spinner /> Loading invitation form…
+      </div>
+    </>
   );
 }
 

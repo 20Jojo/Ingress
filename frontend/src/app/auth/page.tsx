@@ -1,35 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState, type FormEvent } from "react";
 import { getAccessToken, getRefreshToken, isLoggedIn } from "@/lib/auth";
-import { login, logout, register } from "@/lib/authApi";
+import { login, logout } from "@/lib/authApi";
 import { useToast } from "@/components/toast";
-import {
-  Button,
-  Card,
-  ErrorBox,
-  Input,
-  Label,
-  PageShell,
-  PageTitle,
-  SuccessBox,
-} from "@/components/ui";
+import { AuthHeading, AuthLayout } from "@/components/auth-layout";
+import { IconArrowRight, IconCheck, IconLogout } from "@/components/icons";
+import { Button, ButtonLink, ErrorBox, Field, Input, Spinner, SuccessBox, cx } from "@/components/ui";
 
 export default function AuthPage() {
-  const [regEmail, setRegEmail] = useState("");
-  const [regDisplayName, setRegDisplayName] = useState("");
-  const [regPassword, setRegPassword] = useState("");
-
-  const [loginEmail, setLoginEmail] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { push } = useToast();
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
@@ -37,192 +26,121 @@ export default function AuthPage() {
   const accessToken = mounted ? getAccessToken() : null;
   const refreshToken = mounted ? getRefreshToken() : null;
 
-  async function onRegister() {
+  async function onLogin(e?: FormEvent) {
+    e?.preventDefault();
     setError("");
-    setStatus("Registering...");
+    setStatus("");
+    setBusy(true);
     try {
-      await register({
-        email: regEmail,
-        displayName: regDisplayName,
-        password: regPassword,
-      });
-      setStatus("Registered. User created.");
-      push("Registered user", "success");
-    } catch (e: unknown) {
-      setStatus("");
-      const message = getErrorMessage(e, "Register failed");
+      await login({ email, password });
+      setStatus("You're signed in. Tokens are stored for this browser.");
+      push("Signed in", "success");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Sign in failed");
       setError(message);
       push(message, "error");
-    }
-  }
-
-  async function onLogin() {
-    setError("");
-    setStatus("Logging in...");
-    try {
-      await login({ email: loginEmail, password: loginPassword });
-      setStatus("Logged in. Tokens saved to localStorage.");
-      push("Logged in", "success");
-    } catch (e: unknown) {
-      setStatus("");
-      const message = getErrorMessage(e, "Login failed");
-      setError(message);
-      push(message, "error");
+    } finally {
+      setBusy(false);
     }
   }
 
   async function onLogout() {
     setError("");
-    setStatus("Logging out...");
+    setStatus("");
     try {
       await logout();
-      setStatus("Logged out. Tokens cleared.");
-      push("Logged out", "success");
-    } catch (e: unknown) {
-      setStatus("");
-      const message = getErrorMessage(e, "Logout failed");
+      setStatus("You've been signed out.");
+      push("Signed out", "success");
+    } catch (err: unknown) {
+      const message = getErrorMessage(err, "Sign out failed");
       setError(message);
       push(message, "error");
     }
   }
 
   return (
-    <PageShell wide>
-      <PageTitle
-        title="Auth"
-        subtitle="Register and sign in with JWT tokens stored in localStorage."
-      />
+    <AuthLayout>
+      <AuthHeading title="Sign in to Ingress" description="Welcome back. Enter your work email to continue." />
 
-      <div style={panelGrid}>
-        <Card style={panelCard}>
-          <h2 style={h2Style}>Create account</h2>
-          <p style={helperStyle}>Use this in local dev to seed users quickly.</p>
-          <Label>Email</Label>
+      <form onSubmit={onLogin} className="grid gap-5" noValidate>
+        <Field label="Email address" htmlFor="login-email">
           <Input
-            data-testid="auth-register-email"
-            value={regEmail}
-            onChange={(e) => setRegEmail(e.target.value)}
-            placeholder="owner@test.com"
-          />
-
-          <div style={fieldGap}>
-            <Label>Display name</Label>
-            <Input
-              data-testid="auth-register-display-name"
-              value={regDisplayName}
-              onChange={(e) => setRegDisplayName(e.target.value)}
-              placeholder="Owner"
-            />
-          </div>
-
-          <div style={fieldGap}>
-            <Label>Password</Label>
-            <Input
-              data-testid="auth-register-password"
-              value={regPassword}
-              onChange={(e) => setRegPassword(e.target.value)}
-              type="password"
-              placeholder="Pass123!"
-            />
-          </div>
-
-          <Button data-testid="auth-register-submit" onClick={onRegister} style={authPrimaryButtonStyle}>
-            Register
-          </Button>
-        </Card>
-
-        <Card style={panelCard}>
-          <h2 style={h2Style}>Sign in</h2>
-          <p style={helperStyle}>Generates access and refresh tokens for authenticated routes.</p>
-          <Label>Email</Label>
-          <Input
+            id="login-email"
             data-testid="auth-login-email"
-            value={loginEmail}
-            onChange={(e) => setLoginEmail(e.target.value)}
-            placeholder="owner@test.com"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@company.com"
+            autoComplete="email"
+            className="h-11"
           />
+        </Field>
+        <Field label="Password" htmlFor="login-password">
+          <Input
+            id="login-password"
+            data-testid="auth-login-password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Enter your password"
+            autoComplete="current-password"
+            className="h-11"
+          />
+        </Field>
+        <Button data-testid="auth-login-submit" type="submit" size="lg" disabled={busy} className="mt-1 w-full">
+          {busy ? <Spinner className="border-white/40 border-t-white" /> : null}
+          {busy ? "Signing in…" : "Sign in"}
+        </Button>
+      </form>
 
-          <div style={fieldGap}>
-            <Label>Password</Label>
-            <Input
-              data-testid="auth-login-password"
-              value={loginPassword}
-              onChange={(e) => setLoginPassword(e.target.value)}
-              type="password"
-              placeholder="Pass123!"
-            />
-          </div>
+      {error && <ErrorBox>{error}</ErrorBox>}
+      {status && <SuccessBox>{status}</SuccessBox>}
 
-          <Button data-testid="auth-login-submit" onClick={onLogin} style={authPrimaryButtonStyle}>
-            Login
+      {loggedIn && (
+        <ButtonLink href="/orgs" variant="secondary" className="mt-2 w-full">
+          Continue to organizations <IconArrowRight size={16} />
+        </ButtonLink>
+      )}
+
+      <p className="mt-8 text-center text-[13.5px] text-fg-muted">
+        New to Ingress?{" "}
+        <Link href="/register" className="font-medium text-brand-700 hover:text-brand-800 hover:underline">
+          Create an account
+        </Link>
+      </p>
+
+      <section aria-labelledby="session-heading" className="mt-10 rounded-xl border border-line bg-surface p-4 shadow-xs">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id="session-heading" className="text-[13px] font-semibold text-fg">
+            Current session
+          </h2>
+          <Button data-testid="auth-logout" onClick={onLogout} variant="ghost" size="sm" disabled={!mounted}>
+            <IconLogout size={15} /> Sign out
           </Button>
-
-          <div style={logoutSection}>
-            <div data-testid="auth-logged-in" style={{ marginBottom: 8 }}>
-              <strong>Logged in:</strong> {loggedIn ? "Yes" : "No"}
-            </div>
-            <Button data-testid="auth-logout" onClick={onLogout} variant="secondary">
-              Logout
-            </Button>
-          </div>
-        </Card>
-      </div>
-
-      <Card>
-        <h2 style={h2Style}>Session status</h2>
-        <div data-testid="auth-access-token">
-          <strong>Access token:</strong> {accessToken ? "present" : "missing"}
         </div>
-        <div data-testid="auth-refresh-token">
-          <strong>Refresh token:</strong> {refreshToken ? "present" : "missing"}
-        </div>
-
-        {status && <SuccessBox>{status}</SuccessBox>}
-        {error && <ErrorBox>{error}</ErrorBox>}
-      </Card>
-    </PageShell>
+        <dl className="grid grid-cols-3 gap-2">
+          <SessionItem testId="auth-logged-in" term="Logged in" value={loggedIn ? "Yes" : "No"} ok={loggedIn} />
+          <SessionItem testId="auth-access-token" term="Access token" value={accessToken ? "present" : "missing"} ok={!!accessToken} />
+          <SessionItem testId="auth-refresh-token" term="Refresh token" value={refreshToken ? "present" : "missing"} ok={!!refreshToken} />
+        </dl>
+      </section>
+    </AuthLayout>
   );
 }
 
-const h2Style: React.CSSProperties = {
-  fontSize: 22,
-  fontWeight: 700,
-  marginBottom: 8,
-};
-
-const fieldGap: React.CSSProperties = { marginTop: 10 };
-
-const helperStyle: React.CSSProperties = {
-  marginTop: 0,
-  marginBottom: 12,
-  color: "var(--text-muted)",
-  fontSize: 13,
-};
-
-const logoutSection: React.CSSProperties = {
-  marginTop: 16,
-  paddingTop: 16,
-  borderTop: "1px solid var(--border-soft)",
-};
-
-const panelGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-  gap: 16,
-  alignItems: "start",
-};
-
-const panelCard: React.CSSProperties = {
-  minHeight: 300,
-};
-
-const authPrimaryButtonStyle: React.CSSProperties = {
-  padding: "6px 10px",
-};
+function SessionItem({ testId, term, value, ok }: { testId: string; term: string; value: string; ok: boolean }) {
+  return (
+    <div data-testid={testId} className="rounded-lg bg-subtle px-3 py-2">
+      <dt className="text-[11.5px] text-fg-muted">{term}:</dt>{" "}
+      <dd className={cx("m-0 flex items-center gap-1 text-[13px] font-medium", ok ? "text-success-700" : "text-fg-secondary")}>
+        {ok && <IconCheck size={13} />}
+        {value}
+      </dd>
+    </div>
+  );
+}
 
 function getErrorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
   return fallback;
 }

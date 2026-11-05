@@ -2,19 +2,27 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getOrg, listOrgMembers, type OrgDto, type OrgMemberDto } from "@/lib/orgsApi";
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
+import { Avatar } from "@/components/graphics";
+import { IconArrowRight, IconChart, IconFolder, IconMail, IconRefresh, IconUsers } from "@/components/icons";
 import {
   Button,
-  Card,
-  DataList,
-  DataRow,
+  ButtonLink,
   EmptyState,
   ErrorBox,
+  LoadingCard,
+  Mono,
+  PageHeader,
   PageShell,
-  PageTitle,
-  Row,
+  RoleBadge,
+  Section,
+  Table,
+  Td,
+  Th,
+  THead,
+  Tr,
 } from "@/components/ui";
 
 const ORG_DETAIL_EVENTS = ["member.*", "invite.accepted"];
@@ -74,62 +82,99 @@ export default function OrgDetailPage() {
 
   useOrgRealtime(orgId, handleRealtime, { eventTypes: ORG_DETAIL_EVENTS, debounceMs: 350 });
 
+  const preview = members?.slice(0, 6) ?? [];
+
   return (
     <PageShell>
-      <Row>
-        <Link href="/orgs">Back to organizations</Link>
-      </Row>
-
-      <PageTitle title={org?.name ?? "Organization"} subtitle={<code>{orgId}</code>} />
-
-      <Card>
-        <div style={quickActionTitle}>Workspace Actions</div>
-        <Row>
-          <Link href={`/orgs/${orgId}/invite`} style={pillLinkStyle}>
-            Invite members
-          </Link>
-          <Link href={`/orgs/${orgId}/members`} style={pillLinkStyle}>
-            Manage members
-          </Link>
-          <Link href={`/orgs/${orgId}/projects`} style={pillLinkStyle}>
-            Projects
-          </Link>
-          <Link href={`/orgs/${orgId}/dashboard`} style={pillLinkStyle}>
-            Dashboard
-          </Link>
+      <PageHeader
+        leading={<Avatar seed={orgId ?? "org"} label={org?.name ?? "Organization"} size={52} shape="square" />}
+        eyebrow="Organization"
+        title={org?.name ?? "Organization"}
+        meta={<Mono>{orgId}</Mono>}
+        actions={
           <Button onClick={() => void load(true)} variant="secondary">
-            Reload
+            <IconRefresh size={16} /> Reload
           </Button>
-        </Row>
-      </Card>
+        }
+      />
 
       {error && <ErrorBox>{error}</ErrorBox>}
-      {membersAccessMessage && <EmptyState>{membersAccessMessage}</EmptyState>}
 
-      {members && members.length > 0 && (
-        <DataList>
-          <DataRow>
-            <strong>Members ({members.length})</strong>
-          </DataRow>
-          {members.map((m, idx) => (
-            <DataRow key={memberKey(m, idx)}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div>
-                  <strong>{m.role || "Member"}</strong>
-                  <div style={{ opacity: 0.8 }}>{m.userId || "Unknown user"}</div>
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>
-                    Joined: {m.joinedAt ? new Date(m.joinedAt).toLocaleString() : "-"}
-                  </div>
-                </div>
-                <Link href="/users">Users</Link>
-              </div>
-            </DataRow>
-          ))}
-        </DataList>
-      )}
+      <Section title="Workspace" description="Everything in this organization, one click away." id="workspace">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <WorkspaceLink href={`/orgs/${orgId}/dashboard`} title="Dashboard" body="Live metrics, status breakdowns and recent activity." icon={<IconChart size={18} />} />
+          <WorkspaceLink href={`/orgs/${orgId}/projects`} title="Project portfolio" body="Plan work and track delivery across every initiative." icon={<IconFolder size={18} />} />
+          <WorkspaceLink href={`/orgs/${orgId}/members`} title="Manage members" body="Review access and change roles." icon={<IconUsers size={18} />} />
+          <WorkspaceLink href={`/orgs/${orgId}/invite`} title="Invite members" body="Issue and track invitation tokens." icon={<IconMail size={18} />} />
+        </div>
+      </Section>
 
-      {members && members.length === 0 && <EmptyState>No members found.</EmptyState>}
+      <Section
+        title="Members"
+        description={members && !membersAccessMessage ? `${members.length} member${members.length === 1 ? "" : "s"} in this organization` : undefined}
+        actions={
+          members && members.length > 0 ? (
+            <ButtonLink href={`/orgs/${orgId}/members`} variant="ghost" size="sm">
+              View all <IconArrowRight size={14} />
+            </ButtonLink>
+          ) : undefined
+        }
+        id="members"
+      >
+        {members === null && !error && <LoadingCard label="Loading members..." rows={3} />}
+        {membersAccessMessage && (
+          <EmptyState icon={<IconUsers size={20} />} title="Members are restricted" description={membersAccessMessage} compact />
+        )}
+
+        {members && preview.length > 0 && (
+          <Table caption="Members">
+            <THead>
+              <Th>Member</Th>
+              <Th>Role</Th>
+              <Th className="hidden sm:table-cell">Joined</Th>
+            </THead>
+            <tbody>
+              {preview.map((m, idx) => (
+                <Tr key={memberKey(m, idx)}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <Avatar seed={m.userId || `u${idx}`} label={m.userId} size={30} />
+                      <Mono className="text-[12.5px] text-fg-secondary">{m.userId || "Unknown user"}</Mono>
+                    </div>
+                  </Td>
+                  <Td>
+                    <RoleBadge role={m.role || "Member"} />
+                  </Td>
+                  <Td className="hidden text-fg-muted sm:table-cell">{m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : "—"}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+
+        {members && members.length === 0 && !membersAccessMessage && (
+          <EmptyState icon={<IconUsers size={20} />} title="No members found" compact />
+        )}
+      </Section>
     </PageShell>
+  );
+}
+
+function WorkspaceLink({ href, title, body, icon }: { href: string; title: string; body: string; icon: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="group flex h-full flex-col rounded-xl border border-line bg-surface p-5 shadow-xs transition hover:border-brand-200 hover:shadow-md"
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-50 text-brand-700" aria-hidden>
+        {icon}
+      </span>
+      <span className="mt-4 flex items-center justify-between text-[14.5px] font-semibold text-fg">
+        {title}
+        <IconArrowRight size={16} className="text-fg-subtle transition group-hover:translate-x-0.5 group-hover:text-brand-600" />
+      </span>
+      <span className="mt-1 text-[13px] text-fg-muted">{body}</span>
+    </Link>
   );
 }
 
@@ -149,21 +194,3 @@ function memberKey(member: OrgMemberDto, index: number): string {
   const joined = member.joinedAt || `joined-${index}`;
   return `${org}:${user}:${joined}:${index}`;
 }
-
-const quickActionTitle: React.CSSProperties = {
-  fontWeight: 700,
-  marginBottom: 10,
-  fontSize: 14,
-  color: "var(--text-muted)",
-};
-
-const pillLinkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  padding: "8px 12px",
-  borderRadius: 9999,
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  color: "var(--foreground)",
-  fontWeight: 500,
-  fontSize: 13,
-};

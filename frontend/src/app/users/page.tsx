@@ -1,20 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { isLoggedIn } from "@/lib/auth";
 import { getUsers, type UserDto } from "@/lib/usersApi";
 import { useToast } from "@/components/toast";
+import { Avatar } from "@/components/graphics";
+import { IconRefresh, IconUsers } from "@/components/icons";
 import {
   Button,
-  DataList,
-  DataRow,
   EmptyState,
   ErrorBox,
+  InfoBox,
   LoadingCard,
+  Mono,
+  PageHeader,
   PageShell,
-  PageTitle,
-  Row,
+  Section,
+  Table,
+  Td,
+  TextLink,
+  Th,
+  THead,
+  Tr,
 } from "@/components/ui";
 
 export default function UsersPage() {
@@ -23,19 +30,22 @@ export default function UsersPage() {
   const [loggedIn, setLoggedIn] = useState<boolean | null>(null);
   const { push } = useToast();
 
-  const load = useCallback(async (reset: boolean) => {
-    if (reset) {
-      setError("");
-      setUsers(null);
-    }
-    try {
-      setUsers(await getUsers());
-    } catch (e: unknown) {
-      const message = getErrorMessage(e, "Failed to load users");
-      setError(message);
-      push(message, "error");
-    }
-  }, [push]);
+  const load = useCallback(
+    async (reset: boolean) => {
+      if (reset) {
+        setError("");
+        setUsers(null);
+      }
+      try {
+        setUsers(await getUsers());
+      } catch (e: unknown) {
+        const message = getErrorMessage(e, "Failed to load users");
+        setError(message);
+        push(message, "error");
+      }
+    },
+    [push],
+  );
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -45,37 +55,55 @@ export default function UsersPage() {
 
   return (
     <PageShell>
-      <PageTitle title="Users" />
+      <PageHeader
+        title="People"
+        description="Everyone with an Ingress account on this platform."
+        actions={
+          <Button onClick={() => void load(true)} variant="secondary">
+            <IconRefresh size={16} /> Reload
+          </Button>
+        }
+      />
 
-      <Row>
-        <span>
-          Logged in: <strong>{loggedIn === null ? "Checking..." : loggedIn ? "Yes" : "No"}</strong>
-        </span>
-        <Link href="/auth">Go to /auth</Link>
-        <Button onClick={() => void load(true)} variant="secondary">
-          Reload
-        </Button>
-      </Row>
+      {loggedIn === false && (
+        <InfoBox>
+          Logged in: No. <TextLink href="/auth">Sign in</TextLink> to view the directory.
+        </InfoBox>
+      )}
 
       {error && <ErrorBox>{error}</ErrorBox>}
-      {users === null && <LoadingCard label="Loading users..." />}
 
-      {users && users.length === 0 && <EmptyState>No users found.</EmptyState>}
+      <Section title="Directory" description={users ? `${users.length} ${users.length === 1 ? "person" : "people"}` : undefined} id="directory">
+        {users === null && !error && <LoadingCard label="Loading users..." />}
 
-      {users && users.length > 0 && (
-        <DataList>
-          <DataRow>
-            <strong>{users.length} user(s)</strong>
-          </DataRow>
-          {users.map((u, idx) => (
-            <DataRow key={userKey(u, idx)}>
-              <strong>{u.displayName || "Unknown"}</strong>
-              <div style={{ opacity: 0.8 }}>{u.email || "-"}</div>
-              <div style={{ opacity: 0.7, fontSize: 12 }}>{u.id || "-"}</div>
-            </DataRow>
-          ))}
-        </DataList>
-      )}
+        {users && users.length === 0 && <EmptyState icon={<IconUsers size={20} />} title="No users found" />}
+
+        {users && users.length > 0 && (
+          <Table caption="Users">
+            <THead>
+              <Th>Name</Th>
+              <Th>Email</Th>
+              <Th className="hidden md:table-cell">User ID</Th>
+            </THead>
+            <tbody>
+              {users.map((u, idx) => (
+                <Tr key={userKey(u, idx)}>
+                  <Td>
+                    <div className="flex items-center gap-3">
+                      <Avatar seed={u.id || u.email || String(idx)} label={u.displayName || u.email} size={32} />
+                      <span className="font-medium text-fg">{u.displayName || "Unknown"}</span>
+                    </div>
+                  </Td>
+                  <Td className="text-fg-secondary">{u.email || "-"}</Td>
+                  <Td className="hidden md:table-cell">
+                    <Mono>{u.id || "-"}</Mono>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Section>
     </PageShell>
   );
 }

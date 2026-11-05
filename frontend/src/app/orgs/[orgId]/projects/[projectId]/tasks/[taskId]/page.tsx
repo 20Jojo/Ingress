@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listMembers, type MemberDto } from "@/lib/membersApi";
@@ -13,16 +12,27 @@ import {
   type TaskDto,
 } from "@/lib/tasksApi";
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
+import { Avatar } from "@/components/graphics";
+import { IconArrowLeft, IconCalendar } from "@/components/icons";
 import {
+  Badge,
   Button,
+  ButtonLink,
   Card,
+  CardHeader,
   ErrorBox,
+  Field,
   Input,
+  LoadingCard,
+  MetaList,
+  Mono,
+  PageHeader,
   PageShell,
-  PageTitle,
-  Row,
+  STATUS_META,
   Select,
+  StatusBadge,
   TextArea,
+  cx,
 } from "@/components/ui";
 
 const STATUSES = ["Todo", "InProgress", "Done"] as const;
@@ -145,151 +155,140 @@ export default function TaskDetailPage() {
   }, [load]);
   useOrgRealtime(orgId, handleRealtime, { eventTypes: TASK_DETAIL_EVENTS, debounceMs: 300 });
 
-  return (
-    <PageShell wide>
-      <Row>
-        <Link href={`/orgs/${orgId}/projects/${projectId}/tasks`} style={quickLinkStyle}>
-          Back to tasks
-        </Link>
-      </Row>
+  const overdue = !!task?.dueAt && task.status !== "Done" && new Date(task.dueAt).getTime() < Date.now();
 
-      <PageTitle
+  return (
+    <PageShell>
+      <div className="mb-4">
+        <ButtonLink href={`/orgs/${orgId}/projects/${projectId}/tasks`} variant="ghost" size="sm" className="-ml-3">
+          <IconArrowLeft size={15} /> Back to tasks
+        </ButtonLink>
+      </div>
+
+      <PageHeader
+        eyebrow="Task"
         title={task?.title || "Task"}
-        subtitle={<span>Detailed management for task {taskId}</span>}
+        description={task?.description || undefined}
+        meta={
+          <>
+            {task && <StatusBadge status={task.status} />}
+            {overdue && <Badge tone="danger">Overdue</Badge>}
+            <Mono>{taskId}</Mono>
+          </>
+        }
       />
 
       {error && <ErrorBox>{error}</ErrorBox>}
+      {!task && !error && <LoadingCard label="Loading task..." rows={2} />}
 
       {task && (
-        <div style={{ display: "grid", gap: 14 }}>
-          <Card>
-            <h2 style={h2}>Status + Assignee</h2>
-            <div style={twoCol}>
-              <Select
-                value={task.status}
-                onChange={(e) => void onSetStatus(e.target.value)}
-                disabled={busy}
-                aria-label="Task status"
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid content-start gap-6">
+            <Card>
+              <CardHeader title="Status" description="Move this task to the stage it's in." />
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Task status">
+                {STATUSES.map((s) => {
+                  const active = task.status === s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={busy}
+                      onClick={() => !active && void onSetStatus(s)}
+                      className={cx(
+                        "flex cursor-pointer items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-[13.5px] font-medium transition-colors disabled:cursor-wait",
+                        active
+                          ? "border-brand-500 bg-brand-50 text-brand-800 ring-1 ring-inset ring-brand-500"
+                          : "border-line-strong bg-surface text-fg-secondary hover:bg-subtle",
+                      )}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: STATUS_META[s].color }} aria-hidden />
+                      {STATUS_META[s].label}
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
 
-              <Select
-                value={task.assigneeUserId ?? ""}
-                onChange={(e) => void onSetAssignee(e.target.value)}
-                disabled={busy}
-                aria-label="Task assignee"
-              >
-                <option value="">Unassigned</option>
-                {members.map((m, idx) => (
-                  <option key={`${m.userId || "member"}:${idx}`} value={m.userId}>
-                    {m.userId} ({m.role || "Member"})
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </Card>
+            <Card>
+              <CardHeader title="Details" description="Leave a field blank to keep its current value." />
+              <div className="grid gap-5">
+                <Field label="Title" htmlFor="task-title">
+                  <Input id="task-title" value={titleInput} onChange={(e) => setTitleInput(e.target.value)} placeholder={task.title || "Untitled"} />
+                </Field>
+                <Field label="Description" htmlFor="task-desc">
+                  <TextArea
+                    id="task-desc"
+                    value={descriptionInput}
+                    onChange={(e) => setDescriptionInput(e.target.value)}
+                    placeholder={task.description ?? "Add context for your team…"}
+                    rows={5}
+                  />
+                </Field>
+                <div className="flex justify-end">
+                  <Button onClick={onSaveDetails} disabled={busy}>
+                    Save Details
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
 
-          <Card>
-            <h2 style={h2}>Details</h2>
-            <Input
-              value={titleInput}
-              onChange={(e) => setTitleInput(e.target.value)}
-              placeholder={`Title (${task.title || "untitled"})`}
-              aria-label="Task title"
-            />
-            <TextArea
-              value={descriptionInput}
-              onChange={(e) => setDescriptionInput(e.target.value)}
-              placeholder={task.description ?? "Description"}
-              aria-label="Task description"
-              style={{ marginTop: 10 }}
-            />
-            <Button onClick={onSaveDetails} disabled={busy} style={{ ...compactActionButtonStyle, marginTop: 10 }}>
-              Save Details
-            </Button>
-          </Card>
+          <div className="grid content-start gap-6">
+            <Card>
+              <CardHeader title="Assignee" />
+              <div className="flex items-center gap-3">
+                {task.assigneeUserId ? (
+                  <Avatar seed={task.assigneeUserId} label={task.assigneeUserId} size={36} />
+                ) : (
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-dashed border-line-strong text-fg-subtle" aria-hidden>
+                    ?
+                  </span>
+                )}
+                <Select value={task.assigneeUserId ?? ""} onChange={(e) => void onSetAssignee(e.target.value)} disabled={busy} aria-label="Task assignee">
+                  <option value="">Unassigned</option>
+                  {members.map((m, idx) => (
+                    <option key={`${m.userId || "member"}:${idx}`} value={m.userId}>
+                      {m.userId} ({m.role || "Member"})
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            </Card>
 
-          <Card>
-            <h2 style={h2}>Due Date</h2>
-            <div style={subtleInfo}>
-              Current: {task.dueAt ? new Date(task.dueAt).toLocaleString() : "none"}
-            </div>
-            <Input
-              type="datetime-local"
-              value={dueInput}
-              onChange={(e) => setDueInput(e.target.value)}
-              aria-label="Task due date"
-            />
-            <Row>
-              <Button onClick={onSaveDueDate} disabled={busy} style={compactActionButtonStyle}>
-                Save Due Date
-              </Button>
-              <Button
-                onClick={onClearDueDate}
-                disabled={busy}
-                variant="secondary"
-                style={compactActionButtonStyle}
-              >
-                Clear Due Date
-              </Button>
-            </Row>
-          </Card>
+            <Card>
+              <CardHeader title="Due date" icon={<IconCalendar size={17} />} />
+              <div className={cx("mb-4 text-[14px] font-medium", overdue ? "text-danger-700" : "text-fg")}>
+                {task.dueAt ? new Date(task.dueAt).toLocaleString() : "No due date set"}
+              </div>
+              <Input type="datetime-local" value={dueInput} onChange={(e) => setDueInput(e.target.value)} aria-label="Task due date" />
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button onClick={onSaveDueDate} disabled={busy} size="sm">
+                  Save Due Date
+                </Button>
+                <Button onClick={onClearDueDate} disabled={busy} variant="secondary" size="sm">
+                  Clear Due Date
+                </Button>
+              </div>
+            </Card>
 
-          <Card>
-            <h2 style={h2}>Metadata</h2>
-            <div style={metaRow}>Created: {task.createdAt ? new Date(task.createdAt).toLocaleString() : "-"}</div>
-            <div style={metaRow}>Project ID: {task.projectId || "-"}</div>
-            <div style={metaRow}>Task ID: {task.id || "-"}</div>
-          </Card>
+            <Card>
+              <CardHeader title="Metadata" />
+              <MetaList
+                items={[
+                  { term: "Created", value: task.createdAt ? new Date(task.createdAt).toLocaleString() : "-" },
+                  { term: "Project ID", value: <Mono>{task.projectId || "-"}</Mono> },
+                  { term: "Task ID", value: <Mono>{task.id || "-"}</Mono> },
+                ]}
+              />
+            </Card>
+          </div>
         </div>
       )}
     </PageShell>
   );
 }
-
-const h2: React.CSSProperties = {
-  margin: "0 0 10px",
-  fontSize: 18,
-  fontWeight: 700,
-};
-
-const twoCol: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
-  gap: 10,
-};
-
-const quickLinkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  padding: "8px 12px",
-  borderRadius: 9999,
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  color: "var(--foreground)",
-  fontSize: 13,
-  fontWeight: 500,
-};
-
-const subtleInfo: React.CSSProperties = {
-  color: "var(--text-muted)",
-  marginBottom: 8,
-  fontSize: 13,
-};
-
-const metaRow: React.CSSProperties = {
-  color: "var(--text-muted)",
-  marginBottom: 6,
-  fontSize: 14,
-};
-
-const compactActionButtonStyle: React.CSSProperties = {
-  padding: "8px 12px",
-};
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
