@@ -1,21 +1,27 @@
 "use client";
 
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getOrgDashboardData, type DashboardData, type DashboardEvent } from "@/lib/dashboardApi";
 import { useOrgRealtime } from "@/lib/useOrgRealtime";
+import { IconActivity, IconCalendar, IconFolder, IconMail, IconRefresh, IconTask, IconUsers } from "@/components/icons";
 import {
   Button,
   Card,
+  CardHeader,
   EmptyState,
   ErrorBox,
+  PageHeader,
   PageShell,
-  PageTitle,
-  Row,
+  ROLE_META,
+  STATUS_META,
+  Skeleton,
+  StatCard,
+  cx,
 } from "@/components/ui";
 
 const DASHBOARD_EVENTS = ["invite.*", "member.*", "project.*", "task.*"];
+const FALLBACK = ["#64748b", "#0a7bb5", "#48dde0"];
 
 export default function OrgDashboardPage() {
   const params = useParams<{ orgId: string }>();
@@ -35,8 +41,7 @@ export default function OrgDashboardPage() {
         setData(null);
       }
       try {
-        const result = await getOrgDashboardData(orgId);
-        setData(result);
+        setData(await getOrgDashboardData(orgId));
       } catch (e: unknown) {
         setError(getErrorMessage(e, "Failed to load dashboard"));
       }
@@ -56,144 +61,205 @@ export default function OrgDashboardPage() {
 
   useOrgRealtime(orgId, handleRealtime, { eventTypes: DASHBOARD_EVENTS, debounceMs: 500 });
 
+  const statusRows = data
+    ? Object.entries(data.tasksByStatus).map(([key, value], i) => ({
+        key,
+        label: STATUS_META[key]?.label ?? key,
+        value,
+        color: STATUS_META[key]?.color ?? FALLBACK[i % FALLBACK.length],
+      }))
+    : [];
+  const done = data?.tasksByStatus["Done"] ?? 0;
+  const completion = data && data.counts.tasks > 0 ? Math.round((done / data.counts.tasks) * 100) : 0;
+
   return (
-    <PageShell wide>
-      <Row>
-        <Link href={`/orgs/${orgId}`} style={quickLinkStyle}>
-          Back to org
-        </Link>
-      </Row>
-
-      <PageTitle title="Dashboard" subtitle={<span>Realtime overview for organization {orgId}</span>} />
-
-      <Card style={{ marginBottom: 12 }}>
-        <Row>
+    <PageShell>
+      <PageHeader
+        title="Dashboard"
+        description="A live overview of work, people and access in this organization. Updates automatically."
+        actions={
           <Button onClick={() => void load(true)} variant="secondary">
-            Reload
+            <IconRefresh size={16} /> Reload
           </Button>
-          <Link href={`/orgs/${orgId}/projects`} style={quickLinkStyle}>
-            Projects
-          </Link>
-          <Link href={`/orgs/${orgId}/members`} style={quickLinkStyle}>
-            Members
-          </Link>
-          <Link href={`/orgs/${orgId}/invite`} style={quickLinkStyle}>
-            Invites
-          </Link>
-        </Row>
-      </Card>
+        }
+      />
 
       {error && <ErrorBox>{error}</ErrorBox>}
 
+      {!data && !error && <DashboardSkeleton />}
+
       {data && (
-        <div style={{ display: "grid", gap: 14 }}>
-          <section style={cardGrid}>
-            <MetricCard label="Members" value={data.counts.members} />
-            <MetricCard label="Projects" value={data.counts.projects} />
-            <MetricCard label="Tasks" value={data.counts.tasks} />
-            <MetricCard label="Overdue Tasks" value={data.counts.overdueTasks} />
-            <MetricCard label="Pending Invites" value={data.counts.pendingInvites} />
-            <MetricCard label="Accepted Invites" value={data.counts.acceptedInvites} />
-            <MetricCard label="Revoked Invites" value={data.counts.revokedInvites} />
+        <div className="grid gap-6">
+          <section aria-label="Key metrics" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard label="Members" value={data.counts.members} icon={<IconUsers size={16} />} />
+            <StatCard label="Projects" value={data.counts.projects} icon={<IconFolder size={16} />} />
+            <StatCard label="Tasks" value={data.counts.tasks} icon={<IconTask size={16} />} hint={`${completion}% complete`} hintTone="success" />
+            <StatCard
+              label="Overdue tasks"
+              value={data.counts.overdueTasks}
+              icon={<IconCalendar size={16} />}
+              hint={data.counts.overdueTasks > 0 ? "Needs attention" : "Everything on schedule"}
+              hintTone={data.counts.overdueTasks > 0 ? "danger" : "muted"}
+            />
           </section>
 
-          <Card>
-            <h2 style={h2}>Tasks by Status</h2>
-            <StatusBars data={data.tasksByStatus} />
-          </Card>
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Card className="lg:col-span-3">
+              <CardHeader title="Tasks by status" description={`${data.counts.tasks} tasks across ${data.counts.projects} projects`} />
+              {statusRows.length === 0 ? (
+                <EmptyState icon={<IconTask size={20} />} title="No tasks yet" compact />
+              ) : (
+                <>
+                  <div
+                    className="flex h-3 w-full overflow-hidden rounded-full bg-subtle"
+                    role="img"
+                    aria-label={statusRows.map((r) => `${r.label}: ${r.value}`).join(", ")}
+                  >
+                    {statusRows.map((r) => (
+                      <div key={r.key} style={{ width: `${(r.value / Math.max(data.counts.tasks, 1)) * 100}%`, background: r.color }} />
+                    ))}
+                  </div>
+                  <ul className="mt-6 grid gap-3 sm:grid-cols-3">
+                    {statusRows.map((r) => (
+                      <li key={r.key} className="rounded-lg border border-line px-4 py-3">
+                        <div className="flex items-center gap-2 text-[13px] text-fg-muted">
+                          <span className="h-2 w-2 rounded-full" style={{ background: r.color }} aria-hidden />
+                          {r.label}
+                        </div>
+                        <div className="mt-1 flex items-baseline gap-2">
+                          <span className="font-display text-[22px] font-semibold">{r.value}</span>
+                          <span className="text-[12.5px] text-fg-muted">
+                            {Math.round((r.value / Math.max(data.counts.tasks, 1)) * 100)}%
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </Card>
 
-          <Card>
-            <h2 style={h2}>Members by Role</h2>
-            <StatusBars data={data.membersByRole} />
-          </Card>
+            <Card className="lg:col-span-2">
+              <CardHeader title="Members by role" description="Access distribution" />
+              <RoleBars data={data.membersByRole} />
+            </Card>
+          </div>
 
-          <Card>
-            <h2 style={h2}>Recent Activity</h2>
-            {data.recentEvents.length === 0 && <EmptyState>No recent events yet.</EmptyState>}
-            {data.recentEvents.length > 0 && (
-              <div style={{ border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
-                {data.recentEvents.map((ev) => (
-                  <ActivityRow key={ev.id} event={ev} />
-                ))}
-              </div>
-            )}
-          </Card>
+          <div className="grid gap-6 lg:grid-cols-5">
+            <Card className="lg:col-span-2">
+              <CardHeader title="Invitations" description="Status of issued invitation tokens" icon={<IconMail size={17} />} />
+              <dl className="divide-y divide-line">
+                <InviteRow label="Pending" value={data.counts.pendingInvites} dot="bg-warning-500" />
+                <InviteRow label="Accepted" value={data.counts.acceptedInvites} dot="bg-success-600" />
+                <InviteRow label="Revoked" value={data.counts.revokedInvites} dot="bg-fg-subtle" />
+              </dl>
+            </Card>
+
+            <Card className="lg:col-span-3">
+              <CardHeader title="Recent activity" description="Latest tasks and invitations" icon={<IconActivity size={17} />} />
+              {data.recentEvents.length === 0 ? (
+                <EmptyState icon={<IconActivity size={20} />} title="No recent activity" compact />
+              ) : (
+                <ol>
+                  {data.recentEvents.map((ev, i) => (
+                    <ActivityRow key={ev.id} event={ev} last={i === data.recentEvents.length - 1} />
+                  ))}
+                </ol>
+              )}
+            </Card>
+          </div>
         </div>
       )}
     </PageShell>
   );
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function RoleBars({ data }: { data: Record<string, number> }) {
+  const entries = Object.entries(data);
+  if (entries.length === 0) return <EmptyState icon={<IconUsers size={20} />} title="No members" compact />;
+  const total = entries.reduce((s, [, v]) => s + v, 0) || 1;
   return (
-    <Card style={{ padding: 12 }}>
-      <div style={{ fontSize: 12, color: "var(--text-muted)" }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 800 }}>{value}</div>
-    </Card>
+    <ul className="grid gap-5">
+      {entries.map(([role, count]) => (
+        <li key={role}>
+          <div className="mb-2 flex items-center justify-between text-[13.5px]">
+            <span className="font-medium text-fg-secondary">{role}</span>
+            <span className="text-fg-muted">
+              <span className="font-semibold text-fg">{count}</span> · {Math.round((count / total) * 100)}%
+            </span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-subtle">
+            <div
+              className="h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${(count / total) * 100}%`, background: ROLE_META[role]?.color ?? "#48dde0" }}
+            />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function StatusBars({ data }: { data: Record<string, number> }) {
-  const entries = Object.entries(data);
-  if (entries.length === 0) return <EmptyState>No data</EmptyState>;
-
-  const max = Math.max(...entries.map(([, v]) => v), 1);
+function InviteRow({ label, value, dot }: { label: string; value: number; dot: string }) {
   return (
-    <div style={{ display: "grid", gap: 8 }}>
-      {entries.map(([label, count]) => (
-        <div key={label}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span>{label}</span>
-            <strong>{count}</strong>
-          </div>
-          <div style={{ height: 10, borderRadius: 999, background: "var(--surface-muted)", overflow: "hidden" }}>
-            <div
-              style={{
-                width: `${Math.max((count / max) * 100, count > 0 ? 6 : 0)}%`,
-                height: "100%",
-                background: "var(--brand)",
-              }}
-            />
-          </div>
-        </div>
-      ))}
+    <div className="flex items-center justify-between py-3 first:pt-0 last:pb-0">
+      <dt className="flex items-center gap-2.5 text-[13.5px] text-fg-secondary">
+        <span className={cx("h-2 w-2 rounded-full", dot)} aria-hidden />
+        {label}
+      </dt>
+      <dd className="m-0 font-display text-[18px] font-semibold">{value}</dd>
     </div>
   );
 }
 
-function ActivityRow({ event }: { event: DashboardEvent }) {
+function ActivityRow({ event, last }: { event: DashboardEvent; last: boolean }) {
+  const isTask = event.type === "task_created";
   return (
-    <div style={{ padding: 10, borderBottom: "1px solid var(--border-soft)" }}>
-      <div style={{ fontWeight: 600 }}>{event.label}</div>
-      <div style={{ color: "var(--text-muted)", fontSize: 12 }}>
-        {new Date(event.at).toLocaleString()} - {event.type}
+    <li className="relative flex gap-3 pb-4 last:pb-0">
+      {!last && <span aria-hidden className="absolute bottom-0 left-[15px] top-8 w-px bg-line" />}
+      <span
+        className={cx(
+          "relative grid h-8 w-8 shrink-0 place-items-center rounded-full ring-4 ring-surface",
+          isTask ? "bg-brand-50 text-brand-700" : "bg-ocean-50 text-ocean-700",
+        )}
+        aria-hidden
+      >
+        {isTask ? <IconTask size={15} /> : <IconMail size={15} />}
+      </span>
+      <div className="min-w-0 pt-1">
+        <div className="text-[13.5px] font-medium text-fg">{event.label}</div>
+        <div className="text-[12.5px] text-fg-muted">
+          {isTask ? "Task" : "Invitation"} · {new Date(event.at).toLocaleString()}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div role="status" aria-busy="true" className="grid gap-6">
+      <span className="sr-only">Loading dashboard…</span>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="rounded-xl border border-line bg-surface p-5 shadow-xs">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="mt-4 h-7 w-12" />
+          </div>
+        ))}
+      </div>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="h-56 rounded-xl border border-line bg-surface p-6 lg:col-span-3">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="mt-6 h-3 w-full" />
+        </div>
+        <div className="h-56 rounded-xl border border-line bg-surface p-6 lg:col-span-2">
+          <Skeleton className="h-4 w-32" />
+        </div>
       </div>
     </div>
   );
 }
-
-const cardGrid: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-  gap: 10,
-};
-
-const h2: React.CSSProperties = {
-  margin: "0 0 10px",
-  fontSize: 18,
-  fontWeight: 700,
-};
-
-const quickLinkStyle: React.CSSProperties = {
-  textDecoration: "none",
-  padding: "8px 12px",
-  borderRadius: 9999,
-  border: "1px solid var(--border)",
-  background: "var(--surface)",
-  color: "var(--foreground)",
-  fontSize: 13,
-  fontWeight: 500,
-};
 
 function getErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message;
