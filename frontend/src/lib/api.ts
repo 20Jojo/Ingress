@@ -1,8 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!API_BASE_URL) {
-  throw new Error("Missing NEXT_PUBLIC_API_BASE_URL in environment.");
-}
+import { API_BASE_URL } from "@/lib/config";
 
 export type PingResult = {
   ok: boolean;

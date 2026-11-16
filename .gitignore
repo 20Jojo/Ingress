@@ -361,3 +361,11 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Local .NET CLI home and stray build output
+.dotnet/
+**/bin*Debug/
+**/bin*Release/
+
+# Local assistant tooling configuration
+.claude/
+CLAUDE.md

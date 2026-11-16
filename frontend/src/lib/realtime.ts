@@ -5,6 +5,7 @@ import {
   LogLevel,
 } from "@microsoft/signalr";
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
+import { API_BASE_URL } from "@/lib/config";
 
 type Callback = (event: OrgRealtimeEvent) => void;
 
@@ -27,8 +28,7 @@ export type RealtimeConnectionStatus =
   | "reconnecting"
   | "offline";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-const HUB_URL = API_BASE ? `${API_BASE}/hubs/org-events` : "";
+const HUB_URL = `${API_BASE_URL}/hubs/org-events`;
 let refreshPromise: Promise<string | null> | null = null;
 
 let connection: HubConnection | null = null;
@@ -168,10 +168,10 @@ async function refreshAccessToken(): Promise<string | null> {
 
   refreshPromise = (async () => {
     const refreshToken = getRefreshToken();
-    if (!refreshToken || !API_BASE) return null;
+    if (!refreshToken) return null;
 
     try {
-      const res = await fetch(`${API_BASE}/auth/refresh`, {
+      const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refreshToken }),

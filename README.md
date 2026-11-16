@@ -250,7 +250,7 @@ dotnet ef database update -p src/Workflow.Infrastructure/Workflow.Infrastructure
 
 ### 3. Start the frontend
 
-Create `frontend/.env.local` pointing at the API you started:
+Copy `frontend/.env.example` to `frontend/.env.local` and point it at the API you started. If the variable is not set, the app uses `http://localhost:8080` (the Docker API).
 
 ```env
 # Option A (Docker API)
@@ -390,7 +390,7 @@ The API reads standard ASP.NET Core configuration (`appsettings*.json` or enviro
 | `Jwt__AccessTokenMinutes`, `Jwt__RefreshTokenDays` | Token lifetimes |
 | `OpenTelemetry__ServiceName`, `OpenTelemetry__OtlpEndpoint` | Telemetry export |
 
-The frontend needs a single variable: `NEXT_PUBLIC_API_BASE_URL`.
+The frontend needs a single variable: `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8080`).
 
 > **Security note:** the credentials and JWT signing key in `docker-compose.yml` are local-development defaults. Replace them with secrets from your environment or a secret store before deploying anywhere else.
 

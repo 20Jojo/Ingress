@@ -4,18 +4,13 @@ import {
   getRefreshToken,
   setTokens,
 } from "@/lib/auth";
-
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-if (!BASE_URL) {
-  console.warn("NEXT_PUBLIC_API_BASE_URL is not set.");
-}
+import { API_BASE_URL as BASE_URL } from "@/lib/config";
 
 type Json = unknown;
 
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = getRefreshToken();
-  if (!refreshToken || !BASE_URL) return null;
+  if (!refreshToken) return null;
 
   const res = await fetch(`${BASE_URL}/auth/refresh`, {
     method: "POST",
@@ -41,10 +36,6 @@ export async function authFetch(
   input: string,
   init?: RequestInit,
 ): Promise<Response> {
-  if (!BASE_URL && !input.startsWith("http")) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set.");
-  }
-
   const url = input.startsWith("http") ? input : `${BASE_URL}${input}`;
 
   const accessToken = getAccessToken();
